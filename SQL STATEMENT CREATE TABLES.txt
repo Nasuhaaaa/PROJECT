@@ -1,0 +1,80 @@
+CREATE TABLE Role (
+    role_id INT AUTO_INCREMENT PRIMARY KEY,   
+    role_name VARCHAR(50) NOT NULL            
+);
+
+
+
+
+CREATE TABLE Department (
+    department_ID INT AUTO_INCREMENT PRIMARY KEY, 
+    department_name VARCHAR(100) NOT NULL           
+);
+
+
+
+
+CREATE TABLE User (
+    staff_ID VARCHAR PRIMARY KEY,      
+    staff_name VARCHAR(100) NOT NULL,             
+    staff_email VARCHAR(100) NOT NULL UNIQUE,      
+    password VARCHAR(255) NOT NULL,                
+    role_ID INT,                                  
+    department_ID INT,                           
+    FOREIGN KEY (role_ID) REFERENCES Role(role_id),
+    FOREIGN KEY (department_ID) REFERENCES Department(department_ID)
+);
+
+
+
+
+CREATE TABLE Permission (
+    permission_ID INT AUTO_INCREMENT PRIMARY KEY,  
+    permission_name VARCHAR(50) NOT NULL           
+);
+
+
+
+
+CREATE TABLE Policy (
+    policy_ID INT AUTO_INCREMENT PRIMARY KEY,        
+    policy_name VARCHAR(150) NOT NULL,               
+    department_ID INT,                             
+    date_created DATE,                               
+    published_by VARCHAR(30),                                
+    last_updated DATE,                               
+    modified_by VARCHAR(30),                                 
+    file_format VARCHAR(20),                         
+    file_path VARCHAR(255),                          
+    FOREIGN KEY (department_ID) REFERENCES Department(department_ID),
+    FOREIGN KEY (published_by) REFERENCES User(staff_ID),
+    FOREIGN KEY (modified_by) REFERENCES User(staff_ID)
+);
+
+
+
+
+CREATE TABLE Access_Right (
+    access_right_ID INT AUTO_INCREMENT PRIMARY KEY,   
+    policy_ID INT,                                   
+    staff_ID VARCHAR(30),                           
+    permission_ID INT,                               
+    valid_from DATE,                                  
+    FOREIGN KEY (policy_ID) REFERENCES Policy(policy_ID),
+    FOREIGN KEY (staff_ID) REFERENCES User(staff_ID),
+    FOREIGN KEY (permission_ID) REFERENCES Permission(permission_ID)
+);
+
+
+
+
+CREATE TABLE Audit (
+    audit_ID INT AUTO_INCREMENT PRIMARY KEY,
+    policy_ID INT,                                   
+    modified_by VARCHAR(30),                         
+    change_type VARCHAR(50) NOT NULL,                
+    change_description TEXT,                         
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,    
+    FOREIGN KEY (policy_ID) REFERENCES Policy(policy_ID),
+    FOREIGN KEY (modified_by) REFERENCES User(staff_ID)
+);
