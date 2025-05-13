@@ -15,7 +15,7 @@ CREATE TABLE Department (
 
 
 CREATE TABLE User (
-    staff_ID VARCHAR PRIMARY KEY,      
+    staff_ID VARCHAR(30) PRIMARY KEY,      
     staff_name VARCHAR(100) NOT NULL,             
     staff_email VARCHAR(100) NOT NULL UNIQUE,      
     password VARCHAR(255) NOT NULL,                
