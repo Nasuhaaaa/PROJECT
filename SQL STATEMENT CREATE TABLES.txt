@@ -78,3 +78,12 @@ CREATE TABLE Audit (
     FOREIGN KEY (policy_ID) REFERENCES Policy(policy_ID),
     FOREIGN KEY (modified_by) REFERENCES User(staff_ID)
 );
+
+
+
+INSERT INTO Role (role_name) VALUES 
+('Admin'),
+('Editor'), 
+('User');
+
+
