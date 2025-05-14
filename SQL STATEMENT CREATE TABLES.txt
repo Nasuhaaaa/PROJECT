@@ -87,3 +87,16 @@ INSERT INTO Role (role_name) VALUES
 ('User');
 
 
+INSERT INTO Department (department_name) VALUES 
+('Polisi, Perundangan dan Kesedaran'), 
+('Integrasi Teknologi'), 
+('Simetrik'), 
+('Asimetrik'),
+('Migrasi PQC');
+
+
+INSERT INTO Permission (permission_name) VALUES 
+('View Document'), 
+('Edit Document'), 
+('Delete Document'), 
+('Upload Document');
