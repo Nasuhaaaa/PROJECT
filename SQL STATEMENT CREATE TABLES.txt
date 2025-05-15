@@ -108,5 +108,6 @@ INSERT INTO User (staff_ID, staff_name, staff_email, password, role_ID, departme
 VALUES 
   ('S12345', 'Nasuha Sabir', 'NasuhaAdmin@example.com', 'password123', 1, 1),
   ('S12346', 'Effa Umaira', 'EffaEditor@example.com', 'password456', 2, 1),
-  ('S12347', 'Hanie Elvira', 'HanieViewer@example.com', 'password789', 3, 1);
+  ('S12347', 'Hanie Elvira', 'HanieViewer@example.com', 'password789', 3, 1)
+  ('S12348', 'Alieya', 'AlieyaEditor@example.com', 'password101', 2, 2);
 
