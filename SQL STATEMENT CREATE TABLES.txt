@@ -100,3 +100,13 @@ INSERT INTO Permission (permission_name) VALUES
 ('Edit Document'), 
 ('Delete Document'), 
 ('Upload Document');
+
+
+_____________________________________________________________________ 15/5/2025
+
+INSERT INTO User (staff_ID, staff_name, staff_email, password, role_ID, department_ID)
+VALUES 
+  ('S12345', 'Nasuha Sabir', 'NasuhaAdmin@example.com', 'password123', 1, 1),
+  ('S12346', 'Effa Umaira', 'EffaEditor@example.com', 'password456', 2, 1),
+  ('S12347', 'Hanie Elvira', 'HanieViewer@example.com', 'password789', 3, 1);
+
