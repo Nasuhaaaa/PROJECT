@@ -1,3 +1,4 @@
+/*
 const connectToDatabase = require('./Connection_MySQL');
 
 const addUser = async (userData) => {
@@ -29,4 +30,4 @@ const addUser = async (userData) => {
   });
 };
 
-module.exports = addUser;
+module.exports = addUser;*/
