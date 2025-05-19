@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Upload Policy Document</title>
+  
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 500px; margin: 20px auto; }
+    label { font-weight: bold; }
+    input, select, button { width: 100%; padding: 8px; margin: 6px 0 12px; box-sizing: border-box; }
+    #response { margin-top: 20px; padding: 10px; border-radius: 5px; display: none; }
+    #response.success { background-color: #d4edda; color: #155724; }
+    #response.error { background-color: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+  <h2>Upload Policy Document</h2>
+  <form id="uploadForm" enctype="multipart/form-data">
+    <label for="policy_name">Policy Name:</label>
+    <input type="text" id="policy_name" name="policy_name" required />
+
+    <label for="department_ID">Department ID:</label>
+    <input type="number" id="department_ID" name="department_ID" required />
+
+    <label for="published_by">Published By (staff_ID):</label>
+    <input type="text" id="published_by" name="published_by" required />
+
+    <label for="modified_by">Modified By (staff_ID):</label>
+    <input type="text" id="modified_by" name="modified_by" />
+
+    <label for="file_format">File Format:</label>
+    <select id="file_format" name="file_format" required>
+      <option value=".pdf">PDF (.pdf)</option>
+      <option value=".docx">DOCX (.docx)</option>
+    </select>
+
+    <label for="policyFile">Choose File (PDF or DOCX):</label>
+    <input type="file" id="policyFile" name="policyFile" accept=".pdf,.docx" required />
+
+    <button type="submit">Upload</button>
+  </form>
+
+  <div id="response"></div>
+
+  <script>
+    const form = document.getElementById('uploadForm');
+    const responseDiv = document.getElementById('response');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      responseDiv.style.display = 'none';
+      responseDiv.textContent = '';
+      responseDiv.className = '';
+
+      // Optional client-side check: make sure chosen file matches selected format
+      const fileInput = document.getElementById('policyFile');
+      const selectedFormat = document.getElementById('file_format').value.toLowerCase();
+      if (fileInput.files.length > 0) {
+        const fileExt = '.' + fileInput.files[0].name.split('.').pop().toLowerCase();
+        if (fileExt !== selectedFormat) {
+          responseDiv.className = 'error';
+          responseDiv.textContent = 'Selected file format does not match the chosen file format.';
+          responseDiv.style.display = 'block';
+          return;
+        }
+      }
+
+      const formData = new FormData(form);
+
+      try {
+        const res = await fetch('http://localhost:3000/policy/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          responseDiv.className = 'success';
+          responseDiv.textContent = `Success! Policy ID: ${data.policy_ID}`;
+          form.reset();
+        } else {
+          responseDiv.className = 'error';
+          responseDiv.textContent = `Error: ${data.error || data.message || 'Upload failed'}`;
+        }
+      } catch (err) {
+        responseDiv.className = 'error';
+        responseDiv.textContent = `Error: ${err.message}`;
+      }
+
+      responseDiv.style.display = 'block';
+    });
+  </script>
+</body>
+</html>
