@@ -12,7 +12,7 @@ app.use(bodyParser.json());
 app.use('/uploads', express.static('uploads'));          // Serve uploaded files
 app.use('/policy', uploadPolicyRoute);                   // Policy upload endpoint
 
- //Optional: Test DB connection
+//Optional: Test DB connection
 const dbConnection = connectToDatabase();
 dbConnection.query('SELECT * FROM Role', (err, results) => {
   if (err) {
