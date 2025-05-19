@@ -1,30 +1,28 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const connectToDatabase = require('./Connection_MySQL');  // Import the MySQL connection function
+const cors = require('cors');                           // ✅ Needed for frontend access
+const connectToDatabase = require('./Connection_MySQL'); 
+const uploadPolicyRoute = require('./uploadPolicy');    
 
-// Initialize Express app
 const app = express();
+const port = 3000;
 
-// Middleware to parse JSON request bodies
+app.use(cors());                                         // ✅ Allow frontend to talk to backend
 app.use(bodyParser.json());
+app.use('/uploads', express.static('uploads'));          // Serve uploaded files
+app.use('/policy', uploadPolicyRoute);                   // Policy upload endpoint
 
-// Main function
-function main() {
-  // Call the function to connect to the database
-  const dbConnection = connectToDatabase();
+// Optional: Test DB connection
+const dbConnection = connectToDatabase();
+dbConnection.query('SELECT * FROM Role', (err, results) => {
+  if (err) {
+    console.error('Database query failed:', err.stack);
+    return;
+  }
+  console.log('Roles:', results);
+});
 
-  dbConnection.query('SELECT * FROM Role', (err, results) => {
-    if (err) {
-      console.error('Database query failed:', err.stack);
-      return;
-    }
-    console.log('Results:', results);
-  });
-  
-  
-  
-
-}
-
-// Call the main function to start the app
-main();
+// Start server
+app.listen(port, () => {
+  console.log(`✅ Server running at http://localhost:${port}`);
+});
