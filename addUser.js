@@ -7,6 +7,15 @@ const addUser = async (userData) => {
     throw new Error('All fields are required');
   }
 
+  console.log('Received password:', JSON.stringify(password)); // to see if any whitespace or hidden chars
+
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*_])[A-Za-z\d!@#$%^&*_]{8,}$/;
+
+if (!passwordRegex.test(password)) {
+  throw new Error('Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.');
+}
+
+
   const dbConnection = connectToDatabase();  // Get database connection
 
   const sql = `

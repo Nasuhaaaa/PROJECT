@@ -1,46 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Add User - PTPKM POLICY MANAGEMENT SYSTEM</title>
-    
-    <!-- jQuery for AJAX requests -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    
-    <script>
-        $(document).ready(function() {
-            // Fetch roles from the server and populate the "Role ID" dropdown
-            $.get('/getRoles', function(roles) {
-                const roleSelect = $('select[name="role_ID"]');
-                // Ensure there are results
-                if (roles.length > 0) {
-                    roles.forEach(function(role) {
-                        roleSelect.append(`<option value="${role.role_id}">${role.role_name}</option>`);
-                    });
-                } else {
-                    roleSelect.append('<option disabled>No roles available</option>');
-                }
-            }).fail(function() {
-                alert("Error fetching roles");
-            });
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Add User - PTPKM POLICY MANAGEMENT SYSTEM</title>
 
-            // Fetch departments from the server and populate the "Department ID" dropdown
-            $.get('/getDepartments', function(departments) {
-                const departmentSelect = $('select[name="department_ID"]');
-                // Ensure there are results
-                if (departments.length > 0) {
-                    departments.forEach(function(department) {
-                        departmentSelect.append(`<option value="${department.department_ID}">${department.department_name}</option>`);
-                    });
-                } else {
-                    departmentSelect.append('<option disabled>No departments available</option>');
-                }
-            }).fail(function() {
-                alert("Error fetching departments");
-            });
-        });
-    </script>
+  <!-- jQuery for AJAX requests -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+  <script>
+    $(document).ready(function() {
+      // Fetch roles from the server and populate the "Role ID" dropdown
+      $.get('/getRoles', function(roles) {
+        const roleSelect = $('select[name="role_ID"]');
+        if (roles.length > 0) {
+          roles.forEach(function(role) {
+            roleSelect.append(`<option value="${role.role_id}">${role.role_name}</option>`);
+          });
+        } else {
+          roleSelect.append('<option disabled>No roles available</option>');
+        }
+      }).fail(function() {
+        alert("Error fetching roles");
+      });
+
+      // Fetch departments from the server and populate the "Department ID" dropdown
+      $.get('/getDepartments', function(departments) {
+        const departmentSelect = $('select[name="department_ID"]');
+        if (departments.length > 0) {
+          departments.forEach(function(department) {
+            departmentSelect.append(`<option value="${department.department_ID}">${department.department_name}</option>`);
+          });
+        } else {
+          departmentSelect.append('<option disabled>No departments available</option>');
+        }
+      }).fail(function() {
+        alert("Error fetching departments");
+      });
+
+      // Attach submit handler to form with id "addUserForm"
+      $('#addUserForm').on('submit', function(e) {
+        e.preventDefault();
+
+        const passwordErrorDiv = $('#passwordError');
+        passwordErrorDiv.text('');  // clear previous errors
+
+        // Serialize form data
+        const formData = $(this).serialize();
+
+        $.post('/addUser', formData)
+          .done(function(response) {
+            passwordErrorDiv.css('color', 'green');
+            passwordErrorDiv.html(response);  // show success message
+            $('#addUserForm')[0].reset();
+          })
+          .fail(function(xhr) {
+            passwordErrorDiv.css('color', 'red');
+            passwordErrorDiv.html(xhr.responseText);  // show error message from server
+          });
+      });
+      $('#showPassword').on('change', function() {
+        const pwdInput = $('#password');
+        if ($(this).is(':checked')) {
+          pwdInput.attr('type', 'text');
+        } else {
+          pwdInput.attr('type', 'password');
+        }
+      });
+    });
+  </script>
 </head>
 <body>
   <header>
@@ -53,27 +81,32 @@
 
   <main>
     <h2>Add New User</h2>
-    <form method="POST" action="/addUser">
+    <form id="addUserForm" method="POST" action="/addUser">
       <label>Staff ID:<br><input type="text" name="staff_ID" required></label><br><br>
       <label>Staff Name:<br><input type="text" name="staff_name" required></label><br><br>
       <label>Staff Email:<br><input type="email" name="staff_email" required></label><br><br>
-      <label>Password:<br><input type="password" name="password" required></label><br><br>
-      
+      <label>Password:<br>
+        <input type="password" id="password" name="password" required>
+      </label>
+      <div>
+       <input type="checkbox" id="showPassword"> Show Password
+      <div>
+      <div id="passwordError" style="color: red; font-size: 0.9em; margin-top: 4px;"></div><br><br>
+
       <label>Role ID:<br>
         <select name="role_ID" required>
           <option value="">Select Role</option>
         </select>
       </label><br><br>
-      
+
       <label>Department ID:<br>
         <select name="department_ID" required>
           <option value="">Select Department</option>
         </select>
       </label><br><br>
-      
+
       <button type="submit">Add User</button>
     </form>
-    
   </main>
 
   <footer>

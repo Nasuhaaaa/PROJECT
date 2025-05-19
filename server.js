@@ -47,6 +47,15 @@ app.get('/addUser', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'Add_User.html'));
 });
 
+app.post('/addUser', async (req, res) => {
+  try {
+    const result = await addUser(req.body);
+    res.status(200).send(result.message);  // success message plain text
+  } catch (err) {
+    res.status(400).send(err.message);     // error message plain text
+  }
+});
+
 // Route to handle user form submission (POST request)
 app.post('/addUser', async (req, res) => {
   try {
