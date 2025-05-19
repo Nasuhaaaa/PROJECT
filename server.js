@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
 const cors = require('cors');                       // Add this import
+
 const fetchRoles = require('./fetchRoles');  // Import the roles fetching logic
 const fetchDepartments = require('./fetchDepartments');  // Import the departments fetching logic
 const addUser = require('./addUser');  // Import addUser logic from Add_User.js
@@ -63,7 +64,7 @@ app.post('/addUser', async (req, res) => {
     const result = await addUser(userData);  // Call the addUser function to insert data into the database
     res.send(`<h3>${result.message}</h3><a href="/addUser">Add another user</a>`);
   } catch (err) {
-    res.status(400).send(`<h3>Error: ${err.message}</h3><a href="/addUser">Try again</a>`);
+    res.status(400).send('Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.');
   }
 });
 

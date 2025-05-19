@@ -3,10 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <title>Upload Policy Document</title>
+
+  <!-- jQuery for AJAX requests -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+  <script>
+    // Fetch departments from the server and populate the "Department ID" dropdown
+      $.get('/getDepartments', function(departments) {
+        const departmentSelect = $('select[name="department_ID"]');
+        if (departments.length > 0) {
+          departments.forEach(function(department) {
+            departmentSelect.append(`<option value="${department.department_ID}">${department.department_name}</option>`);
+          });
+        } else {
+          departmentSelect.append('<option disabled>No departments available</option>');
+        }
+      }).fail(function() {
+        alert("Error fetching departments");
+      });
+    </script>
+ 
   <style>
     body { font-family: Arial, sans-serif; max-width: 500px; margin: 20px auto; }
     label { font-weight: bold; }
-    input, button { width: 100%; padding: 8px; margin: 6px 0 12px; }
+    input, select, button { width: 100%; padding: 8px; margin: 6px 0 12px; box-sizing: border-box; }
     #response { margin-top: 20px; padding: 10px; border-radius: 5px; display: none; }
     #response.success { background-color: #d4edda; color: #155724; }
     #response.error { background-color: #f8d7da; color: #721c24; }
@@ -18,17 +38,23 @@
     <label for="policy_name">Policy Name:</label>
     <input type="text" id="policy_name" name="policy_name" required />
 
-    <label for="department_ID">Department ID:</label>
-    <input type="number" id="department_ID" name="department_ID" required />
+    <label>Department ID:<br>
+        <select name="department_ID" required>
+          <option value="">Select Department</option>
+        </select>
+      </label><br><br>
 
     <label for="published_by">Published By (staff_ID):</label>
     <input type="text" id="published_by" name="published_by" required />
 
     <label for="modified_by">Modified By (staff_ID):</label>
-    <input type="text" id="modified_by" name="modified_by" required />
+    <input type="text" id="modified_by" name="modified_by" />
 
     <label for="file_format">File Format:</label>
-    <input type="text" id="file_format" name="file_format" required />
+    <select id="file_format" name="file_format" required>
+      <option value=".pdf">PDF (.pdf)</option>
+      <option value=".docx">DOCX (.docx)</option>
+    </select>
 
     <label for="policyFile">Choose File (PDF or DOCX):</label>
     <input type="file" id="policyFile" name="policyFile" accept=".pdf,.docx" required />
@@ -49,6 +75,19 @@
       responseDiv.textContent = '';
       responseDiv.className = '';
 
+      // Optional client-side check: make sure chosen file matches selected format
+      const fileInput = document.getElementById('policyFile');
+      const selectedFormat = document.getElementById('file_format').value.toLowerCase();
+      if (fileInput.files.length > 0) {
+        const fileExt = '.' + fileInput.files[0].name.split('.').pop().toLowerCase();
+        if (fileExt !== selectedFormat) {
+          responseDiv.className = 'error';
+          responseDiv.textContent = 'Selected file format does not match the chosen file format.';
+          responseDiv.style.display = 'block';
+          return;
+        }
+      }
+
       const formData = new FormData(form);
 
       try {
@@ -62,9 +101,10 @@
         if (res.ok) {
           responseDiv.className = 'success';
           responseDiv.textContent = `Success! Policy ID: ${data.policy_ID}`;
+          form.reset();
         } else {
           responseDiv.className = 'error';
-          responseDiv.textContent = `Error: ${data.message || 'Upload failed'}`;
+          responseDiv.textContent = `Error: ${data.error || data.message || 'Upload failed'}`;
         }
       } catch (err) {
         responseDiv.className = 'error';
