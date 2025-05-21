@@ -6,7 +6,9 @@ const cors = require('cors');                       // Add this import
 const fetchRoles = require('./fetchRoles');  // Import the roles fetching logic
 const fetchDepartments = require('./fetchDepartments');  // Import the departments fetching logic
 const addUser = require('./addUser');  // Import addUser logic from Add_User.js
-const uploadPolicyRoute = require('./uploadPolicy');    
+const uploadPolicyRoute = require('./uploadPolicy');  
+const searchPolicy = require('./Search_Policy');    
+
 
 const app = express();
 const PORT = 3000;
@@ -65,6 +67,19 @@ app.post('/addUser', async (req, res) => {
     res.send(`<h3>${result.message}</h3><a href="/addUser">Add another user</a>`);
   } catch (err) {
     res.status(400).send('Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.');
+  }
+});
+
+// Endpoint search
+app.get('/policy/search', async (req, res) => {
+  const query = req.query.q;
+  try {
+    //this will callback search function
+    const results = await searchPolicy(query);
+    res.json(results);
+  } catch (err) {
+    console.error('Search error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
