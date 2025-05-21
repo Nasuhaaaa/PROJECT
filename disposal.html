@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Disposal - Delete Policy Document</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; }
+    label, select, button { width: 100%; margin: 10px 0; }
+    #response { margin-top: 20px; padding: 10px; border-radius: 5px; display: none; }
+    #response.success { background-color: #d4edda; color: #155724; }
+    #response.error { background-color: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+  <h2>Delete Policy Document</h2>
+
+  <label for="policySelect">Select a policy to delete:</label>
+  <select id="policySelect">
+    <option value="">Loading policies...</option>
+  </select>
+
+  <button id="deleteBtn" disabled>Delete Selected Policy</button>
+
+  <div id="response"></div>
+
+  <script>
+    const policySelect = $('#policySelect');
+    const deleteBtn = $('#deleteBtn');
+    const responseDiv = $('#response');
+
+    // Fetch policies and populate dropdown
+    function loadPolicies() {
+      $.get('http://localhost:3000/delete-policy/list')
+        .done((policies) => {
+          policySelect.empty();
+          if (policies.length === 0) {
+            policySelect.append('<option disabled>No policies found</option>');
+            deleteBtn.prop('disabled', true);
+            return;
+          }
+          policySelect.append('<option value="">-- Select Policy --</option>');
+          policies.forEach(policy => {
+            policySelect.append(`<option value="${policy.policy_ID}">${policy.policy_name}</option>`);
+          });
+          deleteBtn.prop('disabled', false);
+        })
+        .fail(() => {
+          policySelect.empty();
+          policySelect.append('<option disabled>Error loading policies</option>');
+          deleteBtn.prop('disabled', true);
+        });
+    }
+
+    // Delete policy function
+    deleteBtn.on('click', () => {
+      const selectedID = policySelect.val();
+      if (!selectedID) {
+        alert('Please select a policy to delete.');
+        return;
+      }
+
+      if (!confirm('Are you sure you want to delete this policy? This action cannot be undone.')) {
+        return;
+      }
+
+      responseDiv.hide().removeClass('success error').text('');
+
+      $.ajax({
+        url: `http://localhost:3000/delete-policy/${selectedID}`,
+        type: 'DELETE',
+      })
+      .done((res) => {
+        responseDiv.addClass('success').text(res.message).show();
+        loadPolicies(); // refresh list
+      })
+      .fail((jqXHR) => {
+        let errMsg = 'Failed to delete policy.';
+        if (jqXHR.responseJSON && jqXHR.responseJSON.error) {
+          errMsg = jqXHR.responseJSON.error;
+        }
+        responseDiv.addClass('error').text(errMsg).show();
+      });
+    });
+
+    // Load policies on page load
+    $(document).ready(() => {
+      loadPolicies();
+    });
+  </script>
+</body>
+</html>

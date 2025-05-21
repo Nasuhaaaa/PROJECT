@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');                           // ✅ Needed for frontend access
 const connectToDatabase = require('./Connection_MySQL'); 
 const uploadPolicyRoute = require('./uploadPolicy');    
+const deletePolicyRoute = require('./deletePolicy');     // <-- Added delete policy route
 
 const app = express();
 const port = 3000;
@@ -11,8 +12,9 @@ app.use(cors());                                         // ✅ Allow frontend t
 app.use(bodyParser.json());
 app.use('/uploads', express.static('uploads'));          // Serve uploaded files
 app.use('/policy', uploadPolicyRoute);                   // Policy upload endpoint
+app.use('/delete-policy', deletePolicyRoute);            // <-- Mounted delete policy endpoint
 
-//Optional: Test DB connection
+// Optional: Test DB connection
 const dbConnection = connectToDatabase();
 dbConnection.query('SELECT * FROM Role', (err, results) => {
   if (err) {
