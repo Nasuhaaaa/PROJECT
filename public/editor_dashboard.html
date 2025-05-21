@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editor Dashboard</title>
+</head>
+<body>
+  <h1>Welcome to your Editor Dashboard</h1>
+
+  <!-- Editor-specific features -->
+  <div>
+    <button onclick="location.href='/upload.html'">Upload Document</button>
+    <button onclick="location.href='/disposal.html'">Delete Document</button>
+
+e
+  </div>
+
+  <!-- Common features for all users -->
+  <div>
+    <button onclick="location.href='/SearchPolicy.html'">Search Documents</button>
+  </div>
+
+  <script>
+    // Ensure this page is accessed only by logged-in editors
+    if (!localStorage.getItem('token')) {
+      window.location.href = '/login.html';
+    } else {
+      const token = localStorage.getItem('token');
+      const decodedToken = JSON.parse(atob(token.split('.')[1]));  // Decode JWT to get the payload
+
+      if (decodedToken.role_ID === 3) {  // If it's a normal user
+        window.location.href = '/user_dashboard.html';  // Redirect to User Dashboard
+      } else if (decodedToken.role_ID !== 2) {  // If not an editor or admin
+        window.location.href = '/login.html';  // Redirect to login page
+      }
+    }
+  </script>
+</body>
+</html>
