@@ -7,7 +7,8 @@ const fetchRoles = require('./fetchRoles');  // Import the roles fetching logic
 const fetchDepartments = require('./fetchDepartments');  // Import the departments fetching logic
 const addUser = require('./addUser');  // Import addUser logic from Add_User.js
 const uploadPolicyRoute = require('./uploadPolicy');  
-const searchPolicy = require('./Search_Policy');    
+const searchPolicy = require('./Search_Policy'); 
+const loginRoutes = require('./login');   
 
 
 const app = express();
@@ -22,6 +23,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Automatically serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Login route
+app.use('/', loginRoutes);
+
 
 //____________ADD USER SECTION____________________________________________________________________________________
 // Route to fetch roles from the database
