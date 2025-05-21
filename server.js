@@ -6,7 +6,10 @@ const cors = require('cors');                       // Add this import
 const fetchRoles = require('./fetchRoles');  // Import the roles fetching logic
 const fetchDepartments = require('./fetchDepartments');  // Import the departments fetching logic
 const addUser = require('./addUser');  // Import addUser logic from Add_User.js
-const uploadPolicyRoute = require('./uploadPolicy');    
+const uploadPolicyRoute = require('./uploadPolicy');  
+const searchPolicy = require('./Search_Policy'); 
+const loginRoutes = require('./login');   
+
 
 const app = express();
 const PORT = 3000;
@@ -20,6 +23,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Automatically serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Login route
+app.use('/', loginRoutes);
+
 
 //____________ADD USER SECTION____________________________________________________________________________________
 // Route to fetch roles from the database
@@ -65,6 +72,19 @@ app.post('/addUser', async (req, res) => {
     res.send(`<h3>${result.message}</h3><a href="/addUser">Add another user</a>`);
   } catch (err) {
     res.status(400).send('Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.');
+  }
+});
+
+// Endpoint search
+app.get('/policy/search', async (req, res) => {
+  const query = req.query.q;
+  try {
+    //this will callback search function
+    const results = await searchPolicy(query);
+    res.json(results);
+  } catch (err) {
+    console.error('Search error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
