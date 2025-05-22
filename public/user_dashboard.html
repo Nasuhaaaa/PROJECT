@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Dashboard</title>
+</head>
+<body>
+  <h1>Welcome to your User Dashboard</h1>
+
+  <!-- Common features for all users -->
+  <div>
+    <button onclick="location.href='/SearchPolicy.html'">Search Documents</button>
+  </div>
+
+  <script>
+    // Ensure this page is accessed only by logged-in users
+    if (!localStorage.getItem('token')) {
+      window.location.href = '/login.html';
+    } else {
+      const token = localStorage.getItem('token');
+      const decodedToken = JSON.parse(atob(token.split('.')[1]));  // Decode JWT to get the payload
+
+      if (decodedToken.role_ID === 2) {  // If it's an editor
+        window.location.href = '/editor_dashboard.html';  // Redirect to Editor Dashboard
+      } else if (decodedToken.role_ID !== 3) {  // If not a normal user or admin
+        window.location.href = '/login.html';  // Redirect to login page
+      }
+    }
+  </script>
+</body>
+</html>

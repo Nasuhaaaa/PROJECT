@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+</head>
+<body>
+  <h1>Welcome to your Admin Dashboard</h1>
+
+  <!-- Admin-specific features -->
+  <div>
+    <button onclick="location.href='/Add_User.html'">Add User</button>
+    <button onclick="location.href='/upload.html'">Upload Document</button>
+    <button onclick="location.href='/disposal.html'">Delete Document</button>
+
+  </div>
+
+  <!-- Common features for all users -->
+  <div>
+    <button onclick="location.href='/SearchPolicy.html'">Search Documents</button>
+  </div>
+
+  <script>
+    // Optional: Ensure this page is accessed only by logged-in admins.
+    if (!localStorage.getItem('token')) {
+      // Redirect to login if no token is found
+      window.location.href = '/login.html';
+    } else {
+      // Decode the JWT token from localStorage
+      const token = localStorage.getItem('token');
+      const decodedToken = JSON.parse(atob(token.split('.')[1]));  // Decode JWT to access role_ID
+
+      console.log('Decoded Token:', decodedToken);  // For debugging purposes
+
+      // If role_ID is not 1 (admin), redirect to user dashboard
+      if (decodedToken.role_ID !== 1) {
+        window.location.href = '/user_dashboard.html';  // Redirect to User Dashboard if not admin
+      }
+    }
+  </script>
+</body>
+</html>

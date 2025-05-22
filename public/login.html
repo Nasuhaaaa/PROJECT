@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login</title>
 </head>
 <body>
@@ -13,26 +15,8 @@
     <button type="submit">Login</button>
   </form>
 
-  <p id="response"></p>
+  <p id="response"></p> <!-- Display any error or success messages -->
 
-  <script>
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const staffId = document.getElementById('staffId').value;
-      const password = document.getElementById('password').value;
-
-      const response = await fetch('/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ staffId, password })
-      });
-
-      const text = await response.text();
-      document.getElementById('response').textContent = text;
-    });
-  </script>
+  <script src="frontend_login.js"></script>  <!-- Link to your frontend_login.js file -->
 </body>
 </html>
