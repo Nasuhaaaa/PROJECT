@@ -9,6 +9,8 @@ const addUser = require('./addUser');  // Import addUser logic from Add_User.js
 const uploadPolicyRoute = require('./uploadPolicy');  
 const searchPolicy = require('./Search_Policy');
 const loginRoutes = require('./login');   
+const deletePolicyRoute = require('./deletePolicy');     // <-- Added delete policy route
+
 
 
 const app = express();
@@ -20,6 +22,8 @@ app.use(bodyParser.json());
 app.use('/uploads', express.static('uploads'));          // Serve uploaded files
 app.use('/policy', uploadPolicyRoute);                   // Policy upload endpoint
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use('/delete-policy', deletePolicyRoute);            // <-- Mounted delete policy endpoint
+
 
 // Automatically serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
