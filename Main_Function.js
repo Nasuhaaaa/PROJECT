@@ -2,7 +2,9 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');                           // ✅ Needed for frontend access
 const connectToDatabase = require('./Connection_MySQL'); 
-const uploadPolicyRoute = require('./uploadPolicy');    
+const uploadPolicyRoute = require('./uploadPolicy'); 
+const searchPolicyRoute = require('./Search_Policy');    
+const deletePolicyRoute = require('./deletePolicy');     // <-- Added delete policy route
 
 const app = express();
 const port = 3000;
@@ -10,8 +12,8 @@ const port = 3000;
 app.use(cors());                                         // ✅ Allow frontend to talk to backend
 app.use(bodyParser.json());
 app.use('/uploads', express.static('uploads'));          // Serve uploaded files
-app.use('/public', express.static('public'));
 app.use('/policy', uploadPolicyRoute);                   // Policy upload endpoint
+app.use('/delete-policy', deletePolicyRoute);            // <-- Mounted delete policy endpoint
 
 // Optional: Test DB connection
 const dbConnection = connectToDatabase();

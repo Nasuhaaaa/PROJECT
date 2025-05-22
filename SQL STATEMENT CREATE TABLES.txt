@@ -53,19 +53,17 @@ CREATE TABLE Policy (
 
 
 
-
+-------------------------------------------------------------changes made here----------------------------------------------------------------
 CREATE TABLE Access_Right (
     access_right_ID INT AUTO_INCREMENT PRIMARY KEY,   
     policy_ID INT,                                   
-    staff_ID VARCHAR(30),                           
     permission_ID INT,                               
     valid_from DATE,                                  
     FOREIGN KEY (policy_ID) REFERENCES Policy(policy_ID),
-    FOREIGN KEY (staff_ID) REFERENCES User(staff_ID),
     FOREIGN KEY (permission_ID) REFERENCES Permission(permission_ID)
 );
 
-
+-----------------------------------------------------------------------------------------------------------------------------------------------
 
 
 CREATE TABLE Audit (
