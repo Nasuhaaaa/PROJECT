@@ -7,7 +7,7 @@ const fetchRoles = require('./fetchRoles');  // Import the roles fetching logic
 const fetchDepartments = require('./fetchDepartments');  // Import the departments fetching logic
 const addUser = require('./addUser');  // Import addUser logic from Add_User.js
 const uploadPolicyRoute = require('./uploadPolicy');  
-const searchPolicy = require('./Search_Policy'); 
+const searchPolicy = require('./Search_Policy');
 const loginRoutes = require('./login');   
 
 
