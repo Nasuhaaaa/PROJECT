@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Edit User - PTPKM POLICY MANAGEMENT SYSTEM</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+  <script>
+    $(document).ready(function () {
+      // Get the staffID from the URL query string
+      const urlParams = new URLSearchParams(window.location.search);
+      const staffID = urlParams.get('staffID');
+
+      // Fetch the user data using the staffID
+      $.get(`http://localhost:3000/getUserDetails?staffID=${staffID}`, function (user) {
+        // Populate the form with the user data
+        $('input[name="staff_ID"]').val(user.staff_ID);
+        $('input[name="staff_name"]').val(user.staff_name);
+        $('input[name="staff_email"]').val(user.staff_email);
+
+        // Pre-select the Role ID and Department ID values
+        $('select[name="role_ID"]').val(user.role_ID);  // Pre-select role
+        $('select[name="department_ID"]').val(user.department_ID);  // Pre-select department
+
+        // Display the original role and department name for reference
+        $('#currentRole').text(user.role_name); // Display current role
+        $('#currentDepartment').text(user.department_name); // Display current department
+      }).fail(function () {
+        alert('Error fetching user details');
+      });
+
+      // Fetch roles from the server and populate the "Role ID" dropdown
+      $.get('http://localhost:3000/getRoles', function (roles) {
+        const roleSelect = $('select[name="role_ID"]');
+        if (roles.length > 0) {
+          roles.forEach(function (role) {
+            roleSelect.append(`<option value="${role.role_id}">${role.role_name}</option>`);
+          });
+        } else {
+          roleSelect.append('<option disabled>No roles available</option>');
+        }
+      }).fail(function () {
+        alert("Error fetching roles");
+      });
+
+      // Fetch departments from the server and populate the "Department ID" dropdown
+      $.get('http://localhost:3000/getDepartments', function (departments) {
+        const departmentSelect = $('select[name="department_ID"]');
+        if (departments.length > 0) {
+          departments.forEach(function (department) {
+            departmentSelect.append(`<option value="${department.department_ID}">${department.department_name}</option>`);
+          });
+        } else {
+          departmentSelect.append('<option disabled>No departments available</option>');
+        }
+      }).fail(function () {
+        alert("Error fetching departments");
+      });
+
+      // Handle the form submission
+      $('#editUserForm').on('submit', function (e) {
+        e.preventDefault();
+
+        // Serialize form data and send to the backend to update
+        const formData = $(this).serialize();
+        $.post(`/editUser`, formData)
+          .done(function (response) {
+            alert(response.message);  // Show success message
+            window.location.href = '/searchUser.html';  // Redirect back to the search page
+          })
+          .fail(function (xhr) {
+            alert(xhr.responseText);  // Show error message
+          });
+      });
+    });
+  </script>
+</head>
+<body>
+  <header>
+    <h1>PTPKM POLICY MANAGEMENT SYSTEM</h1>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/searchUser.html">Search User</a>
+    </nav>
+  </header>
+
+  <main>
+    <h2>Edit User</h2>
+    <form id="editUserForm">
+      <input type="hidden" name="staff_ID" />
+
+      <label>Staff Name:<br><input type="text" name="staff_name" required></label><br><br>
+      <label>Staff Email:<br><input type="email" name="staff_email" required></label><br><br>
+      
+      <!-- Display current role name -->
+      <label>Current Role: <span id="currentRole"></span></label><br><br>
+      <label>Role ID (change role):<br>
+        <select name="role_ID" required>
+          <option value="">Select Role</option>
+        </select>
+      </label><br><br>
+
+      <!-- Display current department name -->
+      <label>Current Department: <span id="currentDepartment"></span></label><br><br>
+      <label>Department ID (change department):<br>
+        <select name="department_ID" required>
+          <option value="">Select Department</option>
+        </select>
+      </label><br><br>
+
+      <button type="submit">Save Changes</button>
+    </form>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 PTPKM SYSTEM. All rights reserved.</p>
+  </footer>
+</body>
+</html>

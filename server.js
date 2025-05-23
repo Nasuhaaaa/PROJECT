@@ -6,10 +6,13 @@ const cors = require('cors');                       // Add this import
 const fetchRoles = require('./fetchRoles');  // Import the roles fetching logic
 const fetchDepartments = require('./fetchDepartments');  // Import the departments fetching logic
 const addUser = require('./addUser');  // Import addUser logic from Add_User.js
+const searchUser = require('./searchUser');  // Import the searchUser function
 const uploadPolicyRoute = require('./uploadPolicy');  
 const searchPolicy = require('./Search_Policy');
 const loginRoutes = require('./login');   
 const deletePolicyRoute = require('./deletePolicy');     // <-- Added delete policy route
+const editUser = require('./editUser');  // Import the logic for editing users
+
 
 
 
@@ -68,7 +71,7 @@ app.post('/addUser', async (req, res) => {
   }
 });
 
-// Route to handle user form submission (POST request)
+// Route to handle user form submission (POST request)-------------------------------------------
 app.post('/addUser', async (req, res) => {
   try {
     const userData = req.body;  // Extract form data from the POST request
@@ -79,7 +82,52 @@ app.post('/addUser', async (req, res) => {
   }
 });
 
-// Endpoint search
+// Route to search users
+app.get('/searchUser', async (req, res) => {
+  const { searchTerm } = req.query;  // Get the search term from the query parameter
+
+  try {
+    const users = await searchUser(searchTerm);  // Call the searchUser function
+    res.status(200).json(users);  // Return the users that matched the search term
+  } catch (error) {
+    res.status(500).json({ error: error.message });  // Return error message if any
+  }
+});
+
+//edit user----------------------------------------------------------------------------------------------
+// Route to fetch user details (used in editUser.html)
+app.get('/getUserDetails', async (req, res) => {
+  const { staffID } = req.query;
+
+  if (!staffID) {
+    return res.status(400).send('Staff ID is required');
+  }
+
+  try {
+    const user = await editUser.getUserDetails(staffID);
+    res.json(user);
+  } catch (err) {
+    res.status(500).send('Error fetching user details');
+  }
+});
+
+// Route to update user details
+app.post('/editUser', async (req, res) => {
+  const { staff_ID, staff_name, staff_email, role_ID, department_ID } = req.body;
+
+  if (!staff_ID || !staff_name || !staff_email || !role_ID || !department_ID) {
+    return res.status(400).send('All fields are required');
+  }
+
+  try {
+    await editUser.updateUserDetails(staff_ID, staff_name, staff_email, role_ID, department_ID);
+    res.status(200).send({ message: 'User updated successfully' });
+  } catch (err) {
+    res.status(500).send('Error updating user');
+  }
+});
+
+// Endpoint search---------------------------------------------------------------------------------------
 app.get('/policy/search', async (req, res) => {
   const query = req.query.q;
   try {
@@ -91,6 +139,7 @@ app.get('/policy/search', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // Start the server
 app.listen(PORT, () => {

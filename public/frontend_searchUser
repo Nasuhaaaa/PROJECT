@@ -1,0 +1,42 @@
+async function searchUsers() {
+  const searchTerm = document.getElementById('searchTerm').value.trim();
+
+  if (!searchTerm) {
+    alert('Please enter a search term.');
+    return;
+  }
+
+  try {
+    const response = await fetch(`http://localhost:3000/searchUser?searchTerm=${searchTerm}`);
+    const data = await response.json();
+
+    if (response.ok) {
+      console.log('Search results:', data);  // Log the search results
+      displayResults(data);  // Handle the search results here and display them
+    } else {
+      console.error('Error:', data.error);  // Handle the error here
+    }
+  } catch (error) {
+    console.error('Network error:', error);
+  }
+}
+
+document.getElementById('searchButton').addEventListener('click', searchUsers);
+
+// Function to display search results in the table
+function displayResults(users) {
+  const tableBody = document.getElementById('resultsTable').getElementsByTagName('tbody')[0];
+  tableBody.innerHTML = '';  // Clear any previous results
+
+  users.forEach(user => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${user.staff_ID}</td>
+      <td>${user.staff_name}</td>
+      <td>${user.staff_email}</td>
+      <td>${user.role_ID}</td>
+      <td>${user.department_ID}</td>
+    `;
+    tableBody.appendChild(row);
+  });
+}
