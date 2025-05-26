@@ -12,6 +12,7 @@ const searchPolicy = require('./Search_Policy');
 const loginRoutes = require('./login');   
 const deletePolicyRoute = require('./deletePolicy');     // <-- Added delete policy route
 const editUser = require('./editUser');  // Import the logic for editing users
+const { submitRequest } = require('./request.js');
 
 
 
@@ -68,6 +69,18 @@ app.post('/addUser', async (req, res) => {
     res.status(200).send(result.message);  // success message plain text
   } catch (err) {
     res.status(400).send(err.message);     // error message plain text
+  }
+});
+
+// POST route for /submit-request
+app.post('/submit-request', async (req, res) => {
+  try {
+    console.log('Received request:', req.body);
+    await submitRequest(req.body);
+    res.status(200).send('Request submitted successfully');
+  } catch (error) {
+    console.error('Error saving request:', error);
+    res.status(500).send('Error saving request');
   }
 });
 
