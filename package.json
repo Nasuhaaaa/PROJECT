@@ -6,5 +6,24 @@
     "multer": "^1.4.5-lts.2",
     "mysql2": "^3.14.1",
     "nodemailer": "^7.0.3"
-  }
+  },
+  "name": "project",
+  "version": "1.0.0",
+  "main": "addUser.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nasuhaaaa/PROJECT.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Nasuhaaaa/PROJECT/issues"
+  },
+  "homepage": "https://github.com/Nasuhaaaa/PROJECT#readme",
+  "description": ""
 }
