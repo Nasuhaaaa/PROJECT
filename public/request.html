@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Policy Request Form</title>
+</head>
+
+<body>
+    <h2>Policy Request Submission</h2>
+    <form action="/submit-request" method="POST">
+        <label for="staff_ID">Staff ID:</label><br>
+        <input type="text" id="staff_ID" name="staff_ID" required><br><br>
+
+        <label for="action">Action:</label><br>
+        <select id="action" name="action" required>
+            <option value="">-- Select Action --</option>
+            <option value="Add">Add</option>
+            <option value="Edit">Edit</option>
+            <option value="Dispose">Dispose</option>
+        </select><br><br>
+
+        <label for="policy_ID">Policy ID:</label><br>
+        <input type="text" id="policy_ID" name="policy_ID" required><br><br>
+
+        <label for="department_ID">Department:</label><br>
+        <select id="department_ID" name="department_ID" required>
+            <option value="">-- Select Department --</option>
+            <option value="Polisi dan Pematuhan">Polisi dan Pematuhan</option>
+            <option value="Integrasi Teknologi">Integrasi Teknologi</option>
+            <option value="Simetrik">Simetrik</option>
+            <option value="Asimetrik">Asimetrik</option>
+            <option value="Migrasi PQC">Migrasi PQC</option>
+        </select><br><br>
+
+        <button type="submit">Submit Request</button>
+    </form>
+</body>
+
+</html>
