@@ -4,16 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login</title>
+  <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <h2>Staff Login</h2>
-  <form id="loginForm">
-    <label for="staffId">Staff ID:</label>
-    <input type="text" id="staffId" name="staffId" required><br><br>
-    <label for="password">Password:</label>
-    <input type="password" id="password" name="password" required><br><br>
-    <button type="submit">Login</button>
-  </form>
+  <div class="login-container">
+    <h2>Staff Login</h2>
+    <form id="loginForm">
+      <label for="staffId">Staff ID:</label>
+      <input type="text" id="staffId" name="staffId" required><br><br>
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" required><br><br>
+      <button type="submit">Login</button>
+    </form>
+  </div>
 
   <p id="response"></p> <!-- Display any error or success messages -->
 
