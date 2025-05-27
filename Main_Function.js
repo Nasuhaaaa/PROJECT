@@ -5,6 +5,9 @@ const connectToDatabase = require('./Connection_MySQL');
 const uploadPolicyRoute = require('./uploadPolicy'); 
 const searchPolicyRoute = require('./Search_Policy');    
 const deletePolicyRoute = require('./deletePolicy');     // <-- Added delete policy route
+const permissionRequestRoute = require('./permissionRequest');
+
+app.use('/api', permissionRequestRoute);
 
 const app = express();
 const port = 3000;

@@ -2,39 +2,127 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <title>Policy Request Form</title>
+  <meta charset="UTF-8" />
+  <title>Policy Request Form</title>
 </head>
 
 <body>
-    <h2>Policy Request Submission</h2>
-    <form action="/submit-request" method="POST">
-        <label for="staff_ID">Staff ID:</label><br>
-        <input type="text" id="staff_ID" name="staff_ID" required><br><br>
+  <h2>Policy Request Submission</h2>
+  <form id="requestForm">
+    <label for="staff_ID">Staff ID:</label><br />
+    <input type="text" id="staff_ID" name="staff_ID" required /><br /><br />
 
-        <label for="action">Action:</label><br>
-        <select id="action" name="action" required>
-            <option value="">-- Select Action --</option>
-            <option value="Add">Add</option>
-            <option value="Edit">Edit</option>
-            <option value="Dispose">Dispose</option>
-        </select><br><br>
+    <label for="action">Action:</label><br />
+    <select id="action" name="action" required>
+      <option value="">-- Select Action --</option>
+      <option value="view">View</option>
+      <option value="upload">Upload</option>
+      <option value="edit">Edit</option>
+      <option value="delete">Delete</option>
+    </select><br /><br />
 
-        <label for="policy_ID">Policy ID:</label><br>
-        <input type="text" id="policy_ID" name="policy_ID" required><br><br>
+    <label for="department_ID">Department:</label><br />
+    <select id="department_ID" name="department_ID" required>
+      <option value="">-- Select Department --</option>
+      <!-- Departments loaded dynamically -->
+    </select><br /><br />
 
-        <label for="department_ID">Department:</label><br>
-        <select id="department_ID" name="department_ID" required>
-            <option value="">-- Select Department --</option>
-            <option value="Polisi dan Pematuhan">Polisi dan Pematuhan</option>
-            <option value="Integrasi Teknologi">Integrasi Teknologi</option>
-            <option value="Simetrik">Simetrik</option>
-            <option value="Asimetrik">Asimetrik</option>
-            <option value="Migrasi PQC">Migrasi PQC</option>
-        </select><br><br>
+    <label for="policy_ID">Policy:</label><br />
+    <select id="policy_ID" name="policy_ID" required>
+      <option value="">-- Select Policy --</option>
+      <!-- Policies loaded dynamically based on department -->
+    </select><br /><br />
 
-        <button type="submit">Submit Request</button>
-    </form>
+    <button type="submit">Submit Request</button>
+  </form>
+
+  <script>
+    const form = document.getElementById('requestForm');
+    const departmentSelect = document.getElementById('department_ID');
+    const policySelect = document.getElementById('policy_ID');
+
+    // Load departments on page load
+    async function loadDepartments() {
+      try {
+        const res = await fetch('/getDepartments');
+        if (!res.ok) throw new Error('Failed to fetch departments');
+        const departments = await res.json();
+
+        // Clear existing options except the first placeholder
+        departmentSelect.length = 1;
+
+        departments.forEach(dept => {
+          const option = document.createElement('option');
+          option.value = dept.department_ID;
+          option.textContent = dept.department_name;
+          departmentSelect.appendChild(option);
+        });
+      } catch (err) {
+        alert('Error loading departments: ' + err.message);
+      }
+    }
+
+    // Load policies when department changes
+    departmentSelect.addEventListener('change', async () => {
+      const departmentID = departmentSelect.value;
+
+      // Clear policies dropdown
+      policySelect.length = 1;
+
+      if (!departmentID) return; // no dept selected, skip fetching policies
+
+      try {
+        const res = await fetch(`/getPolicyIDs?department_ID=${departmentID}`);
+        if (!res.ok) throw new Error('Failed to fetch policies');
+        const policies = await res.json();
+
+        policies.forEach(policy => {
+          const option = document.createElement('option');
+          option.value = policy.policy_ID;
+          option.textContent = policy.policy_name;
+          policySelect.appendChild(option);
+        });
+
+      } catch (err) {
+        alert('Error loading policies: ' + err.message);
+      }
+    });
+
+    // Handle form submit
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const data = {
+        staff_ID: form.staff_ID.value.trim(),
+        action: form.action.value.trim(),
+        policy_ID: form.policy_ID.value.trim(),
+        department_ID: form.department_ID.value.trim()
+      };
+
+      try {
+        const res = await fetch('/submit-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        const json = await res.json();
+
+        if (res.ok) {
+          alert('✅ Success: ' + json.message);
+          form.reset();
+          policySelect.length = 1; // reset policies dropdown on submit
+        } else {
+          alert('❌ Error: ' + (json.error || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('❌ Network error: ' + err.message);
+      }
+    });
+
+    // Initialize on page load
+    loadDepartments();
+  </script>
 </body>
 
 </html>
