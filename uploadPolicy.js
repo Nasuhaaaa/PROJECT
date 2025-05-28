@@ -104,12 +104,12 @@ Uploaded by: ${published_by}.
         //Continue even if email fails
       }
 
-      /*Return file URL or path
+      //Return file URL or path
       res.status(200).json({
         message: 'Policy uploaded successfully and notifications sent.',
         policy_ID: results.insertId,
         file_url: `/uploads/${path.basename(file_path)}`
-      });*/
+      });
     }
   );
 });
