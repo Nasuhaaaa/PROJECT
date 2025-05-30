@@ -3,7 +3,6 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
-
 const fetchRoles = require('./fetchRoles');
 const fetchDepartments = require('./fetchDepartments');
 const addUser = require('./addUser');
@@ -14,6 +13,7 @@ const loginRoutes = require('./login');
 const deletePolicyRoute = require('./deletePolicy');
 const editUser = require('./editUser');
 const { submitRequest } = require('./request.js');
+const { exists } = require('fs');
 
 const app = express();
 const PORT = 3000;
@@ -108,6 +108,46 @@ app.get('/searchUser', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+//--------------------------FORGOT PASSWORD-------------------------------------------------//
+
+// Serve forgot password form
+app.get('/forgot-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'forgotpassword.html'));
+});
+
+
+// Handle reset password POST (without bcrypt)
+app.post('/reset-password', async (req, res) => {
+  const { email, newPassword } = req.body;
+
+  try {
+    const connection = await mysql.createConnection({
+      host: '127.0.0.1',
+      user: 'root',
+      password: '',
+      database: 'policy management system',
+      port: 3306
+    });
+
+    const [users] = await connection.execute('SELECT * FROM user WHERE staff_email = ?', [email]);
+
+    if (users.length === 0) {
+      await connection.end();
+      return res.send('No user found with this email.');
+    }
+
+    // Directly update password (PLAIN TEXT)
+    await connection.execute('UPDATE user SET password = ? WHERE staff_email = ?', [newPassword, email]);
+    await connection.end();
+
+    res.send('Password successfully updated.');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Database error.');
+  }
+});
+
 
 // Edit user - get details
 app.get('/getUserDetails', async (req, res) => {

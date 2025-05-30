@@ -3,12 +3,12 @@ body {
   margin: 0;
   padding: 0;
   font-family: 'Segoe UI', sans-serif;
-  background: linear-gradient(to top, #410f2b, #965867, #fcb9cd);
+  background: linear-gradient(to top, #410f1c, #965867, #fcb9cd);
   height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  background-image: url('mountains.svg'); /* replace with your SVG or image */
+  background-image: url('https://i.pinimg.com/736x/16/d6/65/16d665f720e722cc84952486a0c42798.jpg'); /* replace with your SVG or image */
   background-size: cover;
   background-position: center;
   position: relative;
@@ -28,8 +28,8 @@ form#loginForm {
 /* Form heading */
 h2 {
   text-align: center;
-  margin-bottom: 1.5rem;
-  color: #360012;
+  margin-bottom: 3.0 rem;
+  color: #fafafa;
 }
 
 /* Input fields */
@@ -56,7 +56,7 @@ button[type="submit"] {
   padding: 0.75rem;
   border: none;
   border-radius: 25px;
-  background-color: #5b0e38;
+  background-color: #5b0e2c;
   color: white;
   font-size: 1rem;
   cursor: pointer;
