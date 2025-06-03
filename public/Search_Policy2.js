@@ -16,11 +16,16 @@ async function searchPolicy() {
     data.forEach(policy => {
       const li = document.createElement('li');
       li.innerHTML = `<strong>${policy.policy_name}</strong> -
-        <a href="/${policy.file_path}" target="_blank">View File</a>`;
+        <a href="/${policy.file_path}" target="_blank">View File</a> |
+        <button onclick="editPolicy(${policy.policy_ID})">Edit</a>`;
       resultsList.appendChild(li);
     });
   } catch (err) {
     console.error('Error:', err);
     resultsList.innerHTML = '<li>Error while searching.</li>';
   }
+}
+
+function editPolicy(policyId) {
+  window.location.href = `editPolicy.html?id=${policyId}`;
 }

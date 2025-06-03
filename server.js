@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-
+const mysql = require('mysql2/promise');
 const fetchRoles = require('./fetchRoles');
 const fetchDepartments = require('./fetchDepartments');
 const addUser = require('./addUser');
@@ -12,9 +12,8 @@ const searchPolicy = require('./Search_Policy');
 const loginRoutes = require('./login');
 const deletePolicyRoute = require('./deletePolicy');
 const editUser = require('./editUser');
-const { deleteUser } = require('./deleteUser');
 const { submitRequest } = require('./request.js');
-const { authenticateUser } = require('./auth');
+const { exists } = require('fs');
 
 const app = express();
 const PORT = 3000;
@@ -37,13 +36,18 @@ app.use('/delete-policy', deletePolicyRoute);
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
-
 app.use('/', loginRoutes);
 
-app.get('/getRoles', (req, res) => {
-  fetchRoles()
-    .then(roles => res.json(roles))
-    .catch(err => res.status(500).send('Error fetching roles: ' + err.message));
+// Routes
+
+// Fetch roles
+app.get('/getRoles', async (req, res) => {
+  try {
+    const roles = await fetchRoles();
+    res.json(roles);
+  } catch (err) {
+    res.status(500).send('Error fetching roles: ' + err.message);
+  }
 });
 
 app.get('/getDepartments', (req, res) => {

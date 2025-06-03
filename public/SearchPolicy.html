@@ -1,6 +1,6 @@
-<!DOCTYPE html>
+<!--<!DOCTYPE html>
 <html lang="en">
-<head>
+<head align="center">
   <meta charset="UTF-8">
   <title>Search Policies</title>
   <style>
@@ -8,15 +8,95 @@
     input, button { margin: 10px 0; display: block; }
   </style>
 </head>
-<body>
+<body align="center">
   <h1>Search Policy</h1>
   <input type="text" id="searchQuery" placeholder="Enter search keyword..." />
   <button onclick="searchPolicy()">Search</button>
 
-  <h2>Results</h2>
+  <h4>Results</h4>
   <ul id="searchResults"></ul>
 
-  <!-- Guna JS frontend sebenar -->
+   Guna JS frontend sebenar 
+  <script src="Search_Policy2.js"></script>
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Search Policies</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background-color: white;
+      padding: 30px 40px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      text-align: center;
+      max-width: 500px;
+      width: 100%;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    ul#searchResults {
+      list-style: none;
+      padding: 0;
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    ul#searchResults li {
+      padding: 8px;
+      border-bottom: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Search Policy</h1>
+    <input type="text" id="searchQuery" placeholder="Enter search keyword..." />
+    <button onclick="searchPolicy()">Search</button>
+
+    <h4>Results</h4>
+    <ul id="searchResults"></ul>
+  </div>
+
   <script src="Search_Policy2.js"></script>
 </body>
 </html>
