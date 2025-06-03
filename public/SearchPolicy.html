@@ -6,6 +6,26 @@
   <style>
     body { font-family: Arial; padding: 20px; }
     input, button { margin: 10px 0; display: block; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f4f4f4;
+    }
+
+    .action-btn {
+      margin-right: 5px;
+    }
   </style>
 </head>
 <body>
@@ -14,9 +34,19 @@
   <button onclick="searchPolicy()">Search</button>
 
   <h2>Results</h2>
-  <ul id="searchResults"></ul>
+  <table id="resultsTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>Policy Name</th>
+        <th>View</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="resultsBody"></tbody>
+  </table>
 
-  <!-- Guna JS frontend sebenar -->
+  <p id="noResults" style="color: red;"></p>
+
   <script src="Search_Policy2.js"></script>
 </body>
 </html>
