@@ -13,7 +13,7 @@ async function getPendingRequests() {
   const connection = await mysql.createConnection(dbConfig);
   try {
     const [rows] = await connection.execute(`
-      SELECT r.request_ID, r.staff_ID, r.permission_ID, r.policy_ID, r.status, r.request_date AS request_at,
+      SELECT r.request_ID, r.staff_ID, r.policy_ID, r.status, r.action_type, r.request_date AS request_at,
              u.staff_name, p.policy_name
       FROM permission_request r
       JOIN user u ON r.staff_ID = u.staff_ID
@@ -27,9 +27,11 @@ async function getPendingRequests() {
   }
 }
 
+//approve or reject 
 async function updateRequestStatus(request_ID, newStatus) {
   const connection = await mysql.createConnection(dbConfig);
   try {
+
     await connection.execute(`
       UPDATE permission_request
       SET status = ?, decision_at = CURRENT_TIMESTAMP

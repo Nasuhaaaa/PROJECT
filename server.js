@@ -140,13 +140,36 @@ app.get('/policy/search', async (req, res) => {
 
 app.post('/submit-request', async (req, res) => {
   try {
-    console.log('Received request:', req.body);
-    await submitRequest(req.body);
-    res.status(200).json({ message: 'Request submitted successfully' });
-  } catch (error) {
-    console.error('Error saving request:', error);
-    res.status(500).json({ error: error.message || 'Error saving request' });
+    const rows = await getPendingRequests();
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching pending requests:', err);
+    res.status(500).send({ error:'Internal server errror'});
   }
+});
+
+// POST update request status
+app.put('/api/requests/:id', async (req, res) => {
+  const request_ID = req.params.id;
+  const { status } = req.body;
+  console.log('Updating request', request_ID, 'to status', status);
+
+  if (!['APPROVED', 'DENIED'].includes(status?.toUpperCase())) {
+    return res.status(400).json({ error: 'Invalid status. Use Approved or Denied.' });
+  }
+
+  try {
+    const result = await updateRequestStatus(request_ID, status);
+    res.json(result);
+  } catch (err) {
+    console.error('Error updating request status:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Optional: serve approve.html directly
+app.get('/approve', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'approve.html'));
 });
 
 // Start server

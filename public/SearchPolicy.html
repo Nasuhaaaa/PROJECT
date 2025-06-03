@@ -1,89 +1,102 @@
-<!--<!DOCTYPE html>
-<html lang="en">
-<head align="center">
-  <meta charset="UTF-8">
-  <title>Search Policies</title>
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    input, button { margin: 10px 0; display: block; }
-  </style>
-</head>
-<body align="center">
-  <h1>Search Policy</h1>
-  <input type="text" id="searchQuery" placeholder="Enter search keyword..." />
-  <button onclick="searchPolicy()">Search</button>
-
-  <h4>Results</h4>
-  <ul id="searchResults"></ul>
-
-   Guna JS frontend sebenar 
-  <script src="Search_Policy2.js"></script>
-</body>
-</html> -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Search Policies</title>
   <style>
+    /* Body styling (matching login page) */
     body {
-      font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
-      background-color: #f4f4f4;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to top, #410f1c, #965867, #fcb9cd);
+      height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      background-image: url('https://i.pinimg.com/736x/16/d6/65/16d665f720e722cc84952486a0c42798.jpg');
+      background-size: cover;
+      background-position: center;
+      position: relative;
+    }
+
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(to top, rgba(50, 0, 23, 0.6), transparent);
+      z-index: 0;
     }
 
     .container {
       background-color: white;
-      padding: 30px 40px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 2.5rem;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+      width: 400px;
+      z-index: 1;
+      position: relative;
       text-align: center;
-      max-width: 500px;
-      width: 100%;
     }
 
     h1 {
-      margin-bottom: 20px;
+      color: #440020;
+      margin-bottom: 1.5rem;
     }
 
     input[type="text"] {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 15px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
+      width: 90%;
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      border: none;
+      border-radius: 25px;
+      background-color: #fbc1d3;
+      color: #440020;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    input::placeholder {
+      color: #7c3b51;
     }
 
     button {
-      padding: 10px 20px;
-      background-color: #007bff;
-      color: white;
+      width: 40%;
+      padding: 0.75rem;
       border: none;
-      border-radius: 4px;
+      border-radius: 25px;
+      background-color: #5b0e2c;
+      color: white;
+      font-size: 1rem;
       cursor: pointer;
-      font-size: 16px;
+      transition: background-color 0.3s ease;
     }
 
     button:hover {
-      background-color: #0056b3;
+      background-color: #7b193f;
+    }
+
+    h4 {
+      margin-top: 1.5rem;
+      color: #440020;
     }
 
     ul#searchResults {
       list-style: none;
       padding: 0;
-      margin-top: 20px;
+      margin-top: 1rem;
       text-align: left;
+      max-height: 200px;
+      overflow-y: auto;
     }
 
     ul#searchResults li {
-      padding: 8px;
-      border-bottom: 1px solid #ddd;
+      padding: 5px;
+      background-color: #f9e6ed;
+      border-radius: 5px;
+      margin-bottom: 5px;
+      color: #440020;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
   </style>
 </head>

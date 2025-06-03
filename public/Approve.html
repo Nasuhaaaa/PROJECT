@@ -5,49 +5,117 @@
   <title>Policy Approval Panel</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to top, #410f1c, #965867, #fcb9cd);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-image: url('https://i.pinimg.com/736x/16/d6/65/16d665f720e722cc84952486a0c42798.jpg');
+      background-size: cover;
+      background-position: center;
+      position: relative;
     }
+
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(to top, rgba(50, 0, 23, 0.6), transparent);
+      z-index: 0;
+    }
+
+    .container {
+      background-color: white;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+      width: 90%;
+      max-width: 1000px;
+      z-index: 1;
+      position: relative;
+      overflow-x: auto;
+    }
+
+    h2 {
+      color: #440020;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
     table {
-      border-collapse: collapse;
       width: 100%;
-      margin-top: 20px;
+      border-collapse: collapse;
+      font-size: 0.95rem;
     }
+
     th, td {
-      padding: 8px 12px;
-      border: 1px solid #ccc;
+      padding: 12px 16px;
+      border: 1px solid #ddd;
       text-align: center;
     }
+
     th {
-      background-color: #f0f0f0;
+      background-color: #fbc1d3;
+      color: #440020;
     }
+
+    td {
+      background-color: #fff0f6;
+      color: #440020;
+    }
+
     button {
       margin: 0 4px;
-      padding: 4px 10px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 25px;
+      background-color: #5b0e2c;
+      color: white;
+      font-size: 0.9rem;
       cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #7b193f;
+    }
+
+    @media screen and (max-width: 768px) {
+      table, th, td {
+        font-size: 0.85rem;
+      }
+
+      button {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+      }
     }
   </style>
 </head>
 <body>
-  <h2>Pending Policy Requests</h2>
-  <table id="requestsTable">
-    <thead>
-      <tr>
-        <th>Request ID</th>
-        <th>Staff ID</th>
-        <th>Staff Name</th>
-        <th>Action</th>
-        <th>Policy Name</th>
-        <th>Status</th>
-        <th>Requested At</th>
-        <th>Decision</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div class="container">
+    <h2>Pending Policy Requests</h2>
+    <table id="requestsTable">
+      <thead>
+        <tr>
+          <th>Request ID</th>
+          <th>Staff ID</th>
+          <th>Staff Name</th>
+          <th>Action</th>
+          <th>Policy Name</th>
+          <th>Status</th>
+          <th>Requested At</th>
+          <th>Decision</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
   <script>
-    // Map permission_ID to human-readable action
     const permissionMap = {
       1: 'View',
       2: 'Upload',
@@ -57,9 +125,10 @@
 
     async function fetchPendingRequests() {
       try {
-        const response = await fetch('/api/requests/pending');
-        const requests = await response.json();
+        const response = await fetch('http://localhost:3000/api/requests/pending');
+        if (!response.ok) throw new Error(`Server error: ${response.status}`);
 
+        const requests = await response.json();
         const tbody = document.querySelector('#requestsTable tbody');
         tbody.innerHTML = '';
 
@@ -69,13 +138,13 @@
             <td>${req.request_ID}</td>
             <td>${req.staff_ID}</td>
             <td>${req.staff_name}</td>
-            <td>${permissionMap[req.permission_ID] || 'Unknown'}</td>
+            <td>${req.action_type}</td>
             <td>${req.policy_name}</td>
             <td>${req.status}</td>
             <td>${new Date(req.request_at).toLocaleString()}</td>
             <td>
-              <button onclick="updateStatus(${req.request_ID}, 'Approved')">Approve</button>
-              <button onclick="updateStatus(${req.request_ID}, 'Denied')">Reject</button>
+              <button onclick="updateRequestStatus(${req.request_ID}, 'Approved')">Approve</button>
+              <button onclick="updateRequestStatus(${req.request_ID}, 'Denied')">Reject</button>
             </td>
           `;
           tbody.appendChild(row);
@@ -86,27 +155,24 @@
       }
     }
 
-    async function updateStatus(request_ID, status) {
+    async function updateRequestStatus(request_ID, status) {
       try {
-        const response = await fetch('/api/requests/update', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ request_ID, status })
+        const response = await fetch(`http://localhost:3000/api/requests/${request_ID}`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ status })
         });
 
         const result = await response.json();
         alert(result.message || 'Status updated.');
-        fetchPendingRequests(); // Refresh table
+        fetchPendingRequests();
       } catch (error) {
         console.error('Update failed:', error);
         alert('Failed to update request status.');
       }
     }
 
-    // Load pending requests on page load
-    fetchPendingRequests();
+    window.onload = fetchPendingRequests;
   </script>
 </body>
 </html>
