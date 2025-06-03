@@ -14,6 +14,7 @@ const searchPolicy = require('./Search_Policy');
 const loginRoutes = require('./login');
 const deletePolicyRoute = require('./deletePolicy');
 const editUser = require('./editUser');
+const { deleteUser } = require('./deleteUser');
 const { submitRequest } = require('./request.js');
 const { getPendingRequests, updateRequestStatus } = require('./Approval');
 
@@ -23,79 +24,43 @@ const cors = require('cors');                       // Add this import
 const app = express();
 const PORT = 3000;
 
-// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use('/uploads', express.static('uploads'));
+
+// Use secure access for uploads only
+app.use('/uploads', authenticateUser, (req, res, next) => {
+  if (req.user.role_ID === 1 || req.user.role_ID === 3) {
+    return express.static('uploads')(req, res, next);
+  } else {
+    res.status(403).send('Forbidden: You do not have permission to download files.');
+  }
+});
+
 app.use('/policy', uploadPolicyRoute);
 app.use('/delete-policy', deletePolicyRoute);
 app.use(express.static('public'));
 app.use(express.static(path.join(__dirname, 'public')));
+
 app.use('/', loginRoutes);
 app.use(express.json()); // Make sure this is added before your routes
 
-// Routes
-
-// Fetch roles
-app.get('/getRoles', async (req, res) => {
-  try {
-    const roles = await fetchRoles();
-    res.json(roles);
-  } catch (err) {
-    res.status(500).send('Error fetching roles: ' + err.message);
-  }
+app.get('/getRoles', (req, res) => {
+  fetchRoles()
+    .then(roles => res.json(roles))
+    .catch(err => res.status(500).send('Error fetching roles: ' + err.message));
 });
 
-// Fetch departments
-app.get('/getDepartments', async (req, res) => {
-  try {
-    const departments = await fetchDepartments();
-    res.json(departments);
-  } catch (err) {
-    res.status(500).send('Error fetching departments: ' + err.message);
-  }
+app.get('/getDepartments', (req, res) => {
+  fetchDepartments()
+    .then(departments => res.json(departments))
+    .catch(err => res.status(500).send('Error fetching departments: ' + err.message));
 });
 
-// Fetch policies by department (NEW)
-app.get('/getPolicyIDs', async (req, res) => {
-  const { department_ID } = req.query;
-
-  try {
-    const connection = await mysql.createConnection({
-      host: '127.0.0.1',
-      user: 'root',
-      password: '',
-      database: 'policy management system',
-      port: 3306
-    });
-
-    let query = 'SELECT policy_ID, policy_name FROM policy';
-    const params = [];
-
-    if (department_ID) {
-      query += ' WHERE department_ID = ?';
-      params.push(department_ID);
-    }
-
-    query += ' ORDER BY policy_name ASC';
-
-    const [rows] = await connection.execute(query, params);
-    await connection.end();
-
-    res.json(rows);
-  } catch (err) {
-    console.error('Error fetching policy IDs:', err);
-    res.status(500).json({ error: 'Failed to load policy IDs' });
-  }
-});
-
-// Serve addUser form
 app.get('/addUser', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'Add_User.html'));
 });
 
-// Add user (single POST route to avoid duplicates)
 app.post('/addUser', async (req, res) => {
   try {
     const result = await addUser(req.body);
@@ -137,54 +102,48 @@ app.post('/addUser', async (req, res) => {
 app.get('/searchUser', async (req, res) => {
   const { searchTerm } = req.query;
   try {
-    const users = await searchUser(searchTerm);
-    res.status(200).json(users);
+    console.log('Received request:', req.body);
+    await submitRequest(req.body);
+    res.status(200).send('Request submitted successfully');
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error saving request:', error);
+    res.status(500).send('Error saving request');
   }
 });
 
-//--------------------------FORGOT PASSWORD-------------------------------------------------//
+app.post('/deleteUser', async (req, res) => {
+  const { staff_ID } = req.body;
 
-// Serve forgot password form
-app.get('/forgot-password', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'forgotpassword.html'));
-});
-
-
-// Handle reset password POST (without bcrypt)
-app.post('/reset-password', async (req, res) => {
-  const { email, newPassword } = req.body;
+  if (!staff_ID) {
+    return res.status(400).send('Missing staff_ID');
+  }
 
   try {
-    const connection = await mysql.createConnection({
-      host: '127.0.0.1',
-      user: 'root',
-      password: '',
-      database: 'policy management system',
-      port: 3306
-    });
-
-    const [users] = await connection.execute('SELECT * FROM user WHERE staff_email = ?', [email]);
-
-    if (users.length === 0) {
-      await connection.end();
-      return res.send('No user found with this email.');
-    }
-
-    // Directly update password (PLAIN TEXT)
-    await connection.execute('UPDATE user SET password = ? WHERE staff_email = ?', [newPassword, email]);
-    await connection.end();
-
-    res.send('Password successfully updated.');
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Database error.');
+    await deleteUser(staff_ID);
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    res.status(500).send(error.message);
   }
 });
 
 
-// Edit user - get details
+app.post('/editUser', async (req, res) => {
+  const { staff_ID, staff_name, staff_email, role_ID, department_ID } = req.body;
+
+  if (!staff_ID || !staff_name || !staff_email || !role_ID || !department_ID) {
+    return res.status(400).send('All fields are required');
+  }
+
+  try {
+    await editUser.updateUserDetails(staff_ID, staff_name, staff_email, role_ID, department_ID);
+    res.status(200).send({ message: 'User updated successfully' });
+  } catch (err) {
+    res.status(500).send('Error updating user');
+  }
+});
+
+
+
 app.get('/getUserDetails', async (req, res) => {
   const { staffID } = req.query;
   if (!staffID) {
@@ -198,21 +157,16 @@ app.get('/getUserDetails', async (req, res) => {
   }
 });
 
-// Edit user - update details
-app.post('/editUser', async (req, res) => {
-  const { staff_ID, staff_name, staff_email, role_ID, department_ID } = req.body;
-  if (!staff_ID || !staff_name || !staff_email || !role_ID || !department_ID) {
-    return res.status(400).send('All fields are required');
-  }
+app.get('/searchUser', async (req, res) => {
+  const { searchTerm } = req.query;
   try {
-    await editUser.updateUserDetails(staff_ID, staff_name, staff_email, role_ID, department_ID);
-    res.status(200).send({ message: 'User updated successfully' });
-  } catch (err) {
-    res.status(500).send('Error updating user');
+    const users = await searchUser(searchTerm);
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Search policy
 app.get('/policy/search', async (req, res) => {
   const query = req.query.q;
   try {
