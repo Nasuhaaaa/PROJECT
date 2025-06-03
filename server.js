@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
+<<<<<<< HEAD
 const cors = require('cors');
 const mysql = require('mysql2/promise');
 const fetchRoles = require('./fetchRoles');
@@ -14,6 +15,17 @@ const deletePolicyRoute = require('./deletePolicy');
 const editUser = require('./editUser');
 const { submitRequest } = require('./request.js');
 const { exists } = require('fs');
+=======
+const cors = require('cors');                       // Add this import
+
+const fetchRoles = require('./fetchRoles');  // Import the roles fetching logic
+const fetchDepartments = require('./fetchDepartments');  // Import the departments fetching logic
+const addUser = require('./addUser');  // Import addUser logic from Add_User.js
+const uploadPolicyRoute = require('./uploadPolicy');  
+const searchPolicy = require('./Search_Policy'); 
+const loginRoutes = require('./login');   
+const editPolicyRoute = require('./EditPolicyRoutes');
+>>>>>>> 7d031ce (Simpan perubahan sebelum git pull)
 
 const app = express();
 const PORT = 3000;
@@ -26,9 +38,18 @@ app.use('/uploads', express.static('uploads'));
 app.use('/policy', uploadPolicyRoute);
 app.use('/delete-policy', deletePolicyRoute);
 app.use(express.static(path.join(__dirname, 'public')));
+<<<<<<< HEAD
 app.use('/', loginRoutes);
 
 // Routes
+=======
+// Serve static uploaded files 
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Route
+app.use('/', loginRoutes); // Login
+app.use('/', editPolicyRoute); // Edit
+>>>>>>> 7d031ce (Simpan perubahan sebelum git pull)
 
 // Fetch roles
 app.get('/getRoles', async (req, res) => {

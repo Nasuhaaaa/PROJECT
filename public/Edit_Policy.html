@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Edit Policy</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 2rem auto; }
+    #editorContainer { width: 100%; height: 700px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+
+<h1>Edit Policy Document</h1>
+<div id="editorContainer">Loading editor...</div>
+
+<script>
+  const policyId = new URLSearchParams(window.location.search).get('id');
+  if (!policyId) {
+    document.getElementById('editorContainer').innerText = 'No policy ID specified.';
+  }
+
+  async function fetchPolicy() {
+    try {
+      const res = await fetch(`/api/policies/${policyId}`);
+      if (!res.ok) throw new Error('Policy not found');
+      const policy = await res.json();
+      loadOnlyOfficeEditor(policy);
+    } catch (e) {
+      document.getElementById('editorContainer').innerText = 'Failed to load policy: ' + e.message;
+    }
+  }
+
+  function loadOnlyOfficeEditor(policy) {
+    const config = {
+      "width": "100%",
+      "height": "700px",
+      "type": "desktop",
+      "documentType": policy.file_format === 'pdf' ? 'text' : policy.file_format,
+      "token": "", // Optional: add JWT token here if you implement auth
+      "document": {
+        "title": policy.policy_name,
+        "url": `http://localhost:3000/${policy.file_path}`, // your document URL
+        "fileType": policy.file_format,
+        "key": policy.policy_ID.toString()
+      },
+      "permissions": {
+        "edit": true,
+        "download": true,
+        "print": true
+      },
+      "editorConfig": {
+        "coEditing": { "mode": "fast", "change": true },
+        "mode": "edit",
+        "callbackUrl": `http://localhost:3000/api/policies/${policyId}/save`, // optional save callback URL
+        "lang": "en",
+        "customization": { "autosave": true }
+      }
+    };
+
+    const iframe = document.createElement('iframe');
+    iframe.src = `http://localhost:8080/web-apps/apps/documenteditor/main/index.html?config=${encodeURIComponent(JSON.stringify(config))}`;
+    iframe.style.width = config.width;
+    iframe.style.height = config.height;
+    iframe.frameBorder = '0';
+
+    const container = document.getElementById('editorContainer');
+    container.innerHTML = '';
+    container.appendChild(iframe);
+  }
+
+  fetchPolicy();
+</script>
+
+</body>
+</html>
