@@ -9,6 +9,13 @@ const dbConfig = {
   port: 3306
 };
 
+const actionMap = {
+  view: 1,
+  upload: 2,
+  delete: 3,
+  edit: 4
+};
+
 // Validate input data
 function validateRequestData(data) {
   const { staff_ID, action, policy_ID, department_ID } = data;
