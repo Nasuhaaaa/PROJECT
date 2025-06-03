@@ -1,9 +1,11 @@
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
+
 const cors = require('cors');
 const app = express();
 const PORT = 3000;
+const mysql = require('mysql2/promise');
 
 // Import route logic
 const fetchRoles = require('./fetchRoles');
@@ -15,32 +17,37 @@ const searchPolicy = require('./Search_Policy');
 const loginRoutes = require('./login');
 const deletePolicyRoute = require('./deletePolicy');
 const editUser = require('./editUser');
-const { submitRequest } = require('./request');
+const { deleteUser } = require('./deleteUser');
+const { submitRequest } = require('./request.js');
+const { authenticateUser } = require('./auth');
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Use secure access for uploads only
+app.use('/uploads', authenticateUser, (req, res, next) => {
+  if (req.user.role_ID === 1 || req.user.role_ID === 3) {
+    return express.static('uploads')(req, res, next);
+  } else {
+    res.status(403).send('Forbidden: You do not have permission to download files.');
+  }
+});
+
+app.use('/policy', uploadPolicyRoute);
+app.use('/delete-policy', deletePolicyRoute);
+
 // Serve static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Routes
 app.use('/', loginRoutes);
-app.use('/policy', uploadPolicyRoute);
-app.use('/delete-policy', deletePolicyRoute);
 
-// ========== User Management ==========
-
-// Get roles
-app.get('/getRoles', async (req, res) => {
-  try {
-    const roles = await fetchRoles();
-    res.json(roles);
-  } catch (err) {
-    res.status(500).send('Error fetching roles: ' + err.message);
-  }
+app.get('/getRoles', (req, res) => {
+  fetchRoles()
+    .then(roles => res.json(roles))
+    .catch(err => res.status(500).send('Error fetching roles: ' + err.message));
 });
 
 // Get departments
@@ -67,18 +74,32 @@ app.post('/addUser', async (req, res) => {
   }
 });
 
-// Search user
-app.get('/searchUser', async (req, res) => {
-  const { searchTerm } = req.query;
+app.post('/submit-request', async (req, res) => {
   try {
     const users = await searchUser(searchTerm);
     res.status(200).json(users);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error saving request:', error);
+    res.status(500).send('Error saving request');
   }
 });
 
-// Edit user
+app.post('/deleteUser', async (req, res) => {
+  const { staff_ID } = req.body;
+
+  if (!staff_ID) {
+    return res.status(400).send('Missing staff_ID');
+  }
+
+  try {
+    await deleteUser(staff_ID);
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+
 app.post('/editUser', async (req, res) => {
   const { staff_ID, staff_name, staff_email, role_ID, department_ID } = req.body;
   if (!staff_ID || !staff_name || !staff_email || !role_ID || !department_ID) {
@@ -136,43 +157,6 @@ app.get('/policy/search', async (req, res) => {
   }
 });
 
-// ========== Request Submission ==========
-
-app.post('/submit-request', async (req, res) => {
-  try {
-    const rows = await getPendingRequests();
-    res.json(rows);
-  } catch (err) {
-    console.error('Error fetching pending requests:', err);
-    res.status(500).send({ error:'Internal server errror'});
-  }
-});
-
-// POST update request status
-app.put('/api/requests/:id', async (req, res) => {
-  const request_ID = req.params.id;
-  const { status } = req.body;
-  console.log('Updating request', request_ID, 'to status', status);
-
-  if (!['APPROVED', 'DENIED'].includes(status?.toUpperCase())) {
-    return res.status(400).json({ error: 'Invalid status. Use Approved or Denied.' });
-  }
-
-  try {
-    const result = await updateRequestStatus(request_ID, status);
-    res.json(result);
-  } catch (err) {
-    console.error('Error updating request status:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Optional: serve approve.html directly
-app.get('/approve', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'approve.html'));
-});
-
-// Start server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
