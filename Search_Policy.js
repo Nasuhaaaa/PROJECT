@@ -1,5 +1,6 @@
 const connectToDatabase = require('./Connection_MySQL');
 const db = connectToDatabase();
+console.log('searchPolicy called');
 
 const searchPolicy = async (searchTerm) => {
   return new Promise((resolve, reject) => {

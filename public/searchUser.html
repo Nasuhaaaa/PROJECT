@@ -124,7 +124,12 @@
             <td>${user.staff_email}</td>
             <td>${user.role_ID}</td>
             <td>${user.department_ID}</td>
-            <td><button onclick="editUser('${user.staff_ID}')">Edit</button></td>  <!-- Added Edit button -->
+            <td>
+              <div style="display: inline-flex; gap: 10px;">
+                <button onclick="editUser('${user.staff_ID}')">Edit</button>
+                <button onclick="deleteUser('${user.staff_ID}')">Delete</button>
+              </div>
+            </td>
           `;
           tableBody.appendChild(row);
         });
@@ -135,6 +140,12 @@
     function editUser(staffID) {
       // Redirect to the edit user page with the staff ID (or you could open a modal here)
       window.location.href = `/Edit_User.html?staffID=${staffID}`;  // Modify this URL if needed
+    }
+
+     // Function to handle editing a user
+    function deleteUser(staffID) {
+      // Redirect to the edit user page with the staff ID (or you could open a modal here)
+      window.location.href = `/Delete_User.html?staffID=${staffID}`;  // Modify this URL if needed
     }
   </script>
 
