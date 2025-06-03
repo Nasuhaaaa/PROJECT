@@ -109,3 +109,33 @@ VALUES
   ('S12347', 'Hanie Elvira', 'HanieViewer@example.com', 'password789', 3, 1),
   ('S12348', 'Alieya', 'AlieyaEditor@example.com', 'password101', 2, 2);
 
+_____________________________________________________________________ Request
+
+CREATE TABLE Permission_Request (
+  request_ID INT AUTO_INCREMENT PRIMARY KEY,
+  staff_ID VARCHAR(30),
+  policy_ID INT,
+  permission_ID INT,
+  request_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  status ENUM('Pending', 'Approved', 'Denied') DEFAULT 'Pending',
+  FOREIGN KEY (staff_ID) REFERENCES User(staff_ID),
+  FOREIGN KEY (policy_ID) REFERENCES Policy(policy_ID),
+  FOREIGN KEY (permission_ID) REFERENCES Permission(permission_ID)
+);
+
+_______________________________________________________________________ Add to policy
+
+ALTER TABLE Policy ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE;
+
+_________________________________________________________________________
+
+-- Backup table first (optional but recommended)
+CREATE TABLE IF NOT EXISTS Policy_backup AS SELECT * FROM Policy;
+
+-- Add the 'status' column with ENUM values
+ALTER TABLE Policy
+ADD COLUMN status ENUM('Active', 'Archived') DEFAULT 'Active' AFTER file_path;
+
+-- Optionally, update current policies to ensure proper status
+UPDATE Policy SET status = 'Active' WHERE status IS NULL;
+
