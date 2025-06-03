@@ -1,9 +1,10 @@
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
-<<<<<<< HEAD
+
 const cors = require('cors');
 const mysql = require('mysql2/promise');
+
 const fetchRoles = require('./fetchRoles');
 const fetchDepartments = require('./fetchDepartments');
 const addUser = require('./addUser');
@@ -14,26 +15,10 @@ const loginRoutes = require('./login');
 const deletePolicyRoute = require('./deletePolicy');
 const editUser = require('./editUser');
 const { submitRequest } = require('./request.js');
+const { getPendingRequests, updateRequestStatus } = require('./Approval');
+
 const { exists } = require('fs');
-=======
 const cors = require('cors');                       // Add this import
-
-const fetchRoles = require('./fetchRoles');  // Import the roles fetching logic
-const fetchDepartments = require('./fetchDepartments');  // Import the departments fetching logic
-const addUser = require('./addUser');  // Import addUser logic from Add_User.js
-const uploadPolicyRoute = require('./uploadPolicy');  
-const searchPolicy = require('./Search_Policy'); 
-const loginRoutes = require('./login');   
-<<<<<<< HEAD
-const editPolicyRoute = require('./EditPolicyRoutes');
->>>>>>> 7d031ce (Simpan perubahan sebelum git pull)
-=======
-const deletePolicyRoute = require('./deletePolicy');     // <-- Added delete policy route
-
-const getEditConfig = require('./EditAuth'); 
-
-
->>>>>>> fb61be0 (Your message describing the changes)
 
 const app = express();
 const PORT = 3000;
@@ -45,26 +30,11 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/uploads', express.static('uploads'));
 app.use('/policy', uploadPolicyRoute);
 app.use('/delete-policy', deletePolicyRoute);
+app.use(express.static('public'));
 app.use(express.static(path.join(__dirname, 'public')));
-<<<<<<< HEAD
-<<<<<<< HEAD
 app.use('/', loginRoutes);
 
 // Routes
-=======
-// Serve static uploaded files 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Route
-app.use('/', loginRoutes); // Login
-app.use('/', editPolicyRoute); // Edit
->>>>>>> 7d031ce (Simpan perubahan sebelum git pull)
-=======
-
-// Login route
-app.use('/', loginRoutes);
-app.use('/', getEditConfig);
->>>>>>> fb61be0 (Your message describing the changes)
 
 // Fetch roles
 app.get('/getRoles', async (req, res) => {
@@ -134,7 +104,34 @@ app.post('/addUser', async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
+// Route to handle user form submission (POST request)
+
+// POST route for /submit-request
+app.post('/submit-request', async (req, res) => {
+  try {
+    console.log('Received request:', req.body);
+    await submitRequest(req.body);
+    res.status(200).send('Request submitted successfully');
+  } catch (error) {
+    console.error('Error saving request:', error);
+    res.status(500).send('Error saving request');
+  }
+});
+
+// Route to handle user form submission (POST request)-------------------------------------------
+
+app.post('/addUser', async (req, res) => {
+  try {
+    const userData = req.body;  // Extract form data from the POST request
+    const result = await addUser(userData);  // Call the addUser function to insert data into the database
+    res.send(`<h3>${result.message}</h3><a href="/addUser">Add another user</a>`);
+  } catch (err) {
+    res.status(400).send('Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.');
+  }
+});
+
+// Endpoint search
+
 // Search user
 app.get('/searchUser', async (req, res) => {
   const { searchTerm } = req.query;
@@ -215,20 +212,6 @@ app.post('/editUser', async (req, res) => {
 });
 
 // Search policy
-=======
-// Route to handle user form submission (POST request)
-app.post('/addUser', async (req, res) => {
-  try {
-    const userData = req.body;  // Extract form data from the POST request
-    const result = await addUser(userData);  // Call the addUser function to insert data into the database
-    res.send(`<h3>${result.message}</h3><a href="/addUser">Add another user</a>`);
-  } catch (err) {
-    res.status(400).send('Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.');
-  }
-});
-
-// Endpoint search
->>>>>>> fb61be0 (Your message describing the changes)
 app.get('/policy/search', async (req, res) => {
   const query = req.query.q;
   try {
@@ -240,7 +223,6 @@ app.get('/policy/search', async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
 // Submit request
 app.post('/submit-request', async (req, res) => {
   try {
@@ -251,20 +233,6 @@ app.post('/submit-request', async (req, res) => {
     console.error('Error saving request:', error);
     res.status(500).json({ error: error.message || 'Error saving request' });
   }
-=======
-//Implement backend callback endpoint (EditPolicy)
-app.post('/saveCallback', express.json(), (req, res) => {
-  const status = req.body.status;
-  const policyId = req.query.id;
-
-  if (status === 2 || status === 6) {  // Edited and ready to be saved
-    console.log(`Document for policy ${policyId} was edited.`);
-    // Optional: save backup, log, or update database
-    // Then redirect or mark for approval
-  }
-
-  res.status(200).json({ error: 0 });
->>>>>>> fb61be0 (Your message describing the changes)
 });
 
 // Start server

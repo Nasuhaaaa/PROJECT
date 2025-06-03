@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Policy Approval Panel</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    button {
+      margin: 0 4px;
+      padding: 4px 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h2>Pending Policy Requests</h2>
+  <table id="requestsTable">
+    <thead>
+      <tr>
+        <th>Request ID</th>
+        <th>Staff ID</th>
+        <th>Staff Name</th>
+        <th>Action</th>
+        <th>Policy Name</th>
+        <th>Status</th>
+        <th>Requested At</th>
+        <th>Decision</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    // Map permission_ID to human-readable action
+    const permissionMap = {
+      1: 'View',
+      2: 'Upload',
+      3: 'Delete',
+      4: 'Edit'
+    };
+
+    async function fetchPendingRequests() {
+      try {
+        const response = await fetch('/api/requests/pending');
+        const requests = await response.json();
+
+        const tbody = document.querySelector('#requestsTable tbody');
+        tbody.innerHTML = '';
+
+        requests.forEach(req => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${req.request_ID}</td>
+            <td>${req.staff_ID}</td>
+            <td>${req.staff_name}</td>
+            <td>${permissionMap[req.permission_ID] || 'Unknown'}</td>
+            <td>${req.policy_name}</td>
+            <td>${req.status}</td>
+            <td>${new Date(req.request_at).toLocaleString()}</td>
+            <td>
+              <button onclick="updateStatus(${req.request_ID}, 'Approved')">Approve</button>
+              <button onclick="updateStatus(${req.request_ID}, 'Denied')">Reject</button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Error fetching requests:', error);
+        alert('Failed to load requests.');
+      }
+    }
+
+    async function updateStatus(request_ID, status) {
+      try {
+        const response = await fetch('/api/requests/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ request_ID, status })
+        });
+
+        const result = await response.json();
+        alert(result.message || 'Status updated.');
+        fetchPendingRequests(); // Refresh table
+      } catch (error) {
+        console.error('Update failed:', error);
+        alert('Failed to update request status.');
+      }
+    }
+
+    // Load pending requests on page load
+    fetchPendingRequests();
+  </script>
+</body>
+</html>
