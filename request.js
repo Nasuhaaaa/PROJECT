@@ -52,9 +52,9 @@ async function submitRequest(data) {
     // Insert new request
     await connection.execute(
       `INSERT INTO permission_request 
-       (staff_ID, action_type, policy_ID, department_ID, status, request_at)
-       VALUES (?, ?, ?, ?, 'Pending', CURRENT_TIMESTAMP)`,
-      [staff_ID, action.toLowerCase(), policy_ID, department_ID]
+       (staff_ID, action_type, policy_ID, status, request_date)
+       VALUES (?, ?, ?, 'Pending', CURRENT_TIMESTAMP)`,
+      [staff_ID, action.toLowerCase(), policy_ID]
     );
 
     // Fetch user email to notify
