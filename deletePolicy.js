@@ -30,40 +30,38 @@ router.delete('/:id', async (req, res) => {
   const policyID = req.params.id;
   const db = connectToDatabase();
 
-  // For demo, hardcoding the deleter user staff_ID here
-  const deleterStaffID = 'S12345'; // TODO: Replace with actual logged-in user ID from auth
+  // Replace with real user ID from authentication middleware
+  const deleterStaffID = req.user?.staff_ID || 'S12345';
 
   try {
-    // 1. Get policy details including department_ID and policy_name, file_path
+    // 1. Get policy details
     const [policyResults] = await db.promise().query(
       'SELECT policy_name, file_path, department_ID FROM Policy WHERE policy_ID = ?',
       [policyID]
     );
 
     if (policyResults.length === 0) {
-      db.end();
       return res.status(404).json({ error: 'Policy not found' });
     }
 
     const { policy_name, file_path, department_ID } = policyResults[0];
 
-    // 2. Delete the file (async, but handle error)
-    try {
-      fs.unlinkSync(file_path);
-      console.log(`File deleted: ${file_path}`);
-    } catch (fsErr) {
-      console.error('File deletion error:', fsErr);
-      // Continue even if file delete fails
+    // 2. Delete file if it exists
+    if (fs.existsSync(file_path)) {
+      try {
+        fs.unlinkSync(file_path);
+        console.log(`File deleted: ${file_path}`);
+      } catch (fsErr) {
+        console.error('File deletion error:', fsErr);
+      }
+    } else {
+      console.warn(`File not found, skipping delete: ${file_path}`);
     }
 
-    // 3. Delete policy record from DB
+    // 3. Delete policy from DB
     await db.promise().query('DELETE FROM Policy WHERE policy_ID = ?', [policyID]);
 
-    // 4. Fetch emails for notification:
-    // - deleter email
-    // - all admins emails (Role = Admin)
-    // - all users in the same department
-
+    // 4. Fetch email recipients
     const [deleterRows] = await db.promise().query(
       'SELECT staff_email, staff_name FROM User WHERE staff_ID = ?',
       [deleterStaffID]
@@ -80,34 +78,25 @@ router.delete('/:id', async (req, res) => {
       [department_ID]
     );
 
-    db.end();
-
-    // Compose the notification email content
+    // Compose email content
     const subject = `Policy Document Deleted: ${policy_name}`;
     const message = `
 The policy document titled "${policy_name}" (ID: ${policyID}) has been deleted from the system.
 
-Deleted by: ${deleterRows.length ? deleterRows[0].staff_name : 'Unknown User'} (ID: ${deleterStaffID})
+Deleted by: ${deleterRows[0]?.staff_name || 'Unknown User'} (ID: ${deleterStaffID})
 
 If you have any questions, please contact the administrator.
     `.trim();
 
-    // Prepare unique recipient emails to avoid duplicates
+    // Collect and de-duplicate recipients
     const recipientsSet = new Set();
+    if (deleterRows[0]?.staff_email) recipientsSet.add(deleterRows[0].staff_email);
+    adminRows.forEach(({ staff_email }) => staff_email && recipientsSet.add(staff_email));
+    departmentUsers.forEach(({ staff_email }) => staff_email && recipientsSet.add(staff_email));
 
-    if (deleterRows.length && deleterRows[0].staff_email) {
-      recipientsSet.add(deleterRows[0].staff_email);
-    }
+    console.log('Notifying recipients:', Array.from(recipientsSet));
 
-    adminRows.forEach(admin => {
-      if (admin.staff_email) recipientsSet.add(admin.staff_email);
-    });
-
-    departmentUsers.forEach(user => {
-      if (user.staff_email) recipientsSet.add(user.staff_email);
-    });
-
-    // Send email to all recipients
+    // Send notifications
     for (const email of recipientsSet) {
       try {
         await sendPolicyUpdateEmail(email, subject, message);
@@ -116,12 +105,12 @@ If you have any questions, please contact the administrator.
       }
     }
 
-    // Respond success
-    res.json({ message: 'Policy deleted successfully and notification sent' });
+    res.json({ message: 'Policy deleted successfully and notifications sent.' });
   } catch (error) {
-    db.end();
     console.error('Error during policy deletion:', error);
     res.status(500).json({ error: 'Failed to delete policy' });
+  } finally {
+    db.end(); // Always close DB
   }
 });
 

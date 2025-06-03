@@ -9,14 +9,7 @@ const dbConfig = {
   port: 3306
 };
 
-const actionMap = {
-  view: 1,
-  upload: 2,
-  delete: 3,
-  edit: 4
-};
-
-// Validate input data
+// Validate input fields
 function validateRequestData(data) {
   const { staff_ID, action, policy_ID, department_ID } = data;
 
@@ -25,38 +18,50 @@ function validateRequestData(data) {
   }
 
   const allowedActions = ['view', 'upload', 'delete', 'edit'];
-  const actionLower = action.toLowerCase();
-
-  if (!allowedActions.includes(actionLower)) {
+  if (!allowedActions.includes(action.toLowerCase())) {
     throw new Error(`Invalid action: ${action}`);
   }
 
-  if (actionLower !== 'upload' && !policy_ID) {
+  if (action.toLowerCase() !== 'upload' && !policy_ID) {
     throw new Error('policy_ID is required for this action');
   }
 }
 
-// Send email to the user
+// Fetch policy name
+async function getPolicyName(connection, policy_ID) {
+  if (!policy_ID) return 'N/A';
+
+  const [[row]] = await connection.execute(
+    'SELECT policy_name FROM Policy WHERE policy_ID = ?',
+    [policy_ID]
+  );
+
+  return row?.policy_name || 'Unknown Policy';
+}
+
+// Fetch permission ID
+async function getPermissionID(connection, action) {
+  const permissionName = `${action.charAt(0).toUpperCase()}${action.slice(1)} Document`;
+
+  const [[permRow]] = await connection.execute(
+    'SELECT permission_ID FROM Permission WHERE permission_name = ?',
+    [permissionName]
+  );
+
+  if (!permRow) throw new Error(`Permission not found for action: ${action}`);
+  return permRow.permission_ID;
+}
+
+// Notify user of request submission
 async function notifyUserEmail(connection, staff_ID, policy_ID, action) {
-  let policyName = 'N/A';
+  const policyName = await getPolicyName(connection, policy_ID);
 
-  if (policy_ID) {
-    const [[policyRow]] = await connection.execute(
-      `SELECT policy_name FROM Policy WHERE policy_ID = ?`,
-      [policy_ID]
-    );
-    policyName = policyRow?.policy_name || 'Unknown Policy';
-  }
-
-  // Get user email
   const [userRows] = await connection.execute(
-    `SELECT staff_email FROM User WHERE staff_ID = ?`,
+    'SELECT staff_email FROM User WHERE staff_ID = ?',
     [staff_ID]
   );
 
   if (userRows.length === 0) return;
-
-  const userEmail = userRows[0].staff_email;
 
   const subject = `Policy Permission Request by ${staff_ID}`;
   const body = `
@@ -67,29 +72,20 @@ Your request to ${action} the policy "${policyName}" (Policy ID: ${policy_ID || 
 Thank you.
   `;
 
-  await sendPolicyUpdateEmail(userEmail, subject, body);
+  await sendPolicyUpdateEmail(userRows[0].staff_email, subject, body);
 }
 
-// Send email to all admins
+// Notify all admins
 async function notifyAdmins(connection, staff_ID, policy_ID, action) {
-  let policyName = 'N/A';
+  const policyName = await getPolicyName(connection, policy_ID);
 
-  if (policy_ID) {
-    const [[policyRow]] = await connection.execute(
-      `SELECT policy_name FROM Policy WHERE policy_ID = ?`,
-      [policy_ID]
-    );
-    policyName = policyRow?.policy_name || 'Unknown Policy';
-  }
-
-  // Get admin emails (assuming role_id = 1 is Admin)
   const [adminRows] = await connection.execute(
-    `SELECT staff_email FROM User WHERE role_ID = 1`
+    'SELECT staff_email FROM User WHERE role_ID = 1'
   );
 
   if (adminRows.length === 0) return;
 
-  const subject = `New Policy Permission Request Submitted`;
+  const subject = 'New Policy Permission Request Submitted';
   const body = `
 Hello Admin,
 
@@ -98,57 +94,47 @@ User ${staff_ID} has submitted a request to ${action} the policy "${policyName}"
 Thank you.
   `;
 
-  // Send email to each admin
   for (const admin of adminRows) {
     await sendPolicyUpdateEmail(admin.staff_email, subject, body);
   }
 }
 
-// Main function to submit request
+// Main submission function
 async function submitRequest(data) {
   validateRequestData(data);
-
   const connection = await mysql.createConnection(dbConfig);
 
   try {
-    const { staff_ID, action, policy_ID, department_ID } = data;
+    const { staff_ID, action, policy_ID } = data;
     const actionLower = action.toLowerCase();
+    const permissionName = `${action.charAt(0).toUpperCase()}${action.slice(1)} Document`;
 
-    // Check for existing pending request
+    // Check for duplicate pending requests
     const [existing] = await connection.execute(
-      `SELECT * FROM Permission_Request 
-       WHERE staff_ID = ? AND permission_ID = (
-         SELECT permission_ID FROM Permission WHERE permission_name = ?
-       ) AND policy_ID = ? AND status = 'Pending'`,
-      [staff_ID, actionLower.charAt(0).toUpperCase() + actionLower.slice(1) + ' Document', policy_ID]
+      `SELECT 1 FROM Permission_Request 
+       WHERE staff_ID = ? 
+         AND permission_ID = (SELECT permission_ID FROM Permission WHERE permission_name = ?) 
+         AND policy_ID = ? AND status = 'Pending'`,
+      [staff_ID, permissionName, policy_ID]
     );
 
     if (existing.length > 0) {
       throw new Error('You already have a pending request for this action on this policy.');
     }
 
-    // Insert new request
-    await connection.execute(
-      `INSERT INTO permission_request 
-       (staff_ID, action_type, policy_ID, status, request_date)
-       VALUES (?, ?, ?, 'Pending', CURRENT_TIMESTAMP)`,
-      [staff_ID, action.toLowerCase(), policy_ID]
-    );
+    // Get permission ID
+    const permissionID = await getPermissionID(connection, actionLower);
 
-    if (!permRow) {
-      throw new Error(`Permission not found for action: ${action}`);
-    }
-
-    // Insert into Permission_Request table
+    // Insert request
     await connection.execute(
       `INSERT INTO Permission_Request 
        (staff_ID, policy_ID, permission_ID, request_date, status)
        VALUES (?, ?, ?, CURRENT_TIMESTAMP, 'Pending')`,
-      [staff_ID, policy_ID, permRow.permission_ID]
+      [staff_ID, policy_ID, permissionID]
     );
 
-    // Log into Audit
-    const auditDescription = `Permission request submitted for "${action}" on policy ID ${policy_ID || 'N/A'} by ${staff_ID}.`;
+    // Log in audit
+    const auditDescription = `Permission request submitted for "${actionLower}" on policy ID ${policy_ID || 'N/A'} by ${staff_ID}.`;
 
     await connection.execute(
       `INSERT INTO Audit (policy_ID, modified_by, change_type, change_description)
@@ -156,13 +142,11 @@ async function submitRequest(data) {
       [policy_ID || null, staff_ID, auditDescription]
     );
 
-    // Notify user
-    await notifyUserEmail(connection, staff_ID, policy_ID, action);
+    // Notify user and admins
+    await notifyUserEmail(connection, staff_ID, policy_ID, actionLower);
+    await notifyAdmins(connection, staff_ID, policy_ID, actionLower);
 
-    // Notify admins
-    await notifyAdmins(connection, staff_ID, policy_ID, action);
-
-    return { message: 'Request submitted and audit logged successfully' };
+    return { message: 'Request submitted and audit logged successfully.' };
 
   } catch (err) {
     console.error('[submitRequest] Error:', err.message);
