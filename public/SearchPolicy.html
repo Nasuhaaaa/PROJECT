@@ -106,9 +106,19 @@
     <input type="text" id="searchQuery" placeholder="Enter search keyword..." />
     <button onclick="searchPolicy()">Search</button>
 
-    <h4>Results</h4>
-    <ul id="searchResults"></ul>
-  </div>
+  <h2>Results</h2>
+  <table id="resultsTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>Policy Name</th>
+        <th>View</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="resultsBody"></tbody>
+  </table>
+
+  <p id="noResults" style="color: red;"></p>
 
   <script src="Search_Policy2.js"></script>
 </body>

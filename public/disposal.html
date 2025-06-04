@@ -1,110 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Delete Policy Document</title>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; }
-    label, select, button, input, textarea { width: 100%; margin: 10px 0; }
-    #response { margin-top: 20px; padding: 10px; border-radius: 5px; display: none; }
-    #response.success { background-color: #d4edda; color: #155724; }
-    #response.error { background-color: #f8d7da; color: #721c24; }
-  </style>
+  <meta charset="UTF-8">
+  <title>Delete Policy</title>
 </head>
 <body>
-  <h2>Delete Policy Document</h2>
+  <h1>Delete Policy</h1>
+  <p id="status">Processing...</p>
 
-  <label for="policySelect">Select a policy to delete:</label>
-  <select id="policySelect">
-    <option value="">Loading policies...</option>
-  </select>
+<script>
+  const urlParams = new URLSearchParams(window.location.search);
+  const policyID = urlParams.get('policyID');
 
-  <label for="deletedBy">Deleted by (staff ID):</label>
-  <input type="text" id="deletedBy" placeholder="Enter your staff ID" />
+  const token = localStorage.getItem('token');  // Retrieve the JWT token
 
-  <label for="deleteReason">Reason for deletion:</label>
-  <textarea id="deleteReason" placeholder="Enter reason for deletion"></textarea>
-
-  <button id="deleteBtn" disabled>Delete Selected Policy</button>
-
-  <div id="response"></div>
-
-  <script>
-    const policySelect = $('#policySelect');
-    const deleteBtn = $('#deleteBtn');
-    const responseDiv = $('#response');
-
-    function loadPolicies() {
-      $.get('http://localhost:3000/delete-policy/list')
-        .done((policies) => {
-          policySelect.empty();
-          if (policies.length === 0) {
-            policySelect.append('<option disabled>No policies found</option>');
-            deleteBtn.prop('disabled', true);
-            return;
-          }
-          policySelect.append('<option value="">-- Select Policy --</option>');
-          policies.forEach(policy => {
-            policySelect.append(`<option value="${policy.policy_ID}">${policy.policy_name}</option>`);
-          });
-          deleteBtn.prop('disabled', false);
-        })
-        .fail(() => {
-          policySelect.empty();
-          policySelect.append('<option disabled>Error loading policies</option>');
-          deleteBtn.prop('disabled', true);
-        });
-    }
-
-    deleteBtn.on('click', () => {
-      const selectedID = policySelect.val();
-      const deletedBy = $('#deletedBy').val().trim();
-      const deleteReason = $('#deleteReason').val().trim();
-
-      if (!selectedID) {
-        alert('Please select a policy to delete.');
-        return;
+  if (!policyID) {
+    document.getElementById('status').textContent = 'No policy ID provided.';
+  } else if (!token) {
+    document.getElementById('status').textContent = 'Unauthorized: Token missing.';
+  } else {
+    fetch(`/delete-policy/${policyID}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`  // Include the token in the Authorization header
       }
-      if (!deletedBy) {
-        alert('Please enter your staff ID.');
-        return;
-      }
-      if (!deleteReason) {
-        alert('Please enter a reason for deletion.');
-        return;
-      }
-      if (!confirm('Are you sure you want to delete this policy? This action cannot be undone.')) {
+    })
+    .then(async response => {
+      const errorText = await response.text();
+
+      if (response.status === 403) {
+        document.getElementById('status').textContent = 'Permission Denied: Insufficient Privilege';
         return;
       }
 
-      responseDiv.hide().removeClass('success error').text('');
+      if (!response.ok) {
+        throw new Error(`Server error ${response.status}: ${errorText}`);
+      }
 
-      $.ajax({
-        url: `http://localhost:3000/delete-policy/${selectedID}`,
-        type: 'DELETE',
-        contentType: 'application/json',
-        data: JSON.stringify({ deleted_by: deletedBy, delete_reason: deleteReason }),
-      })
-      .done((res) => {
-        responseDiv.addClass('success').text(res.message).show();
-        loadPolicies();
-        $('#deletedBy').val('');
-        $('#deleteReason').val('');
-      })
-      .fail((jqXHR) => {
-        let errMsg = 'Failed to delete policy.';
-        if (jqXHR.responseJSON && jqXHR.responseJSON.error) {
-          errMsg = jqXHR.responseJSON.error;
-        }
-        responseDiv.addClass('error').text(errMsg).show();
-      });
+      const data = JSON.parse(errorText);
+      if (data.error) {
+        document.getElementById('status').textContent = `Error: ${data.error}`;
+      } else {
+        document.getElementById('status').textContent = data.message;
+      }
+    })
+    .catch(err => {
+      console.error('Delete error:', err);
+      document.getElementById('status').textContent = 'Failed to delete the policy.';
     });
+  }
+</script>
 
-    $(document).ready(() => {
-      loadPolicies();
-    });
-  </script>
 </body>
 </html>

@@ -1,28 +1,40 @@
 async function searchPolicy() {
   const query = document.getElementById('searchQuery').value;
-  const resultsList = document.getElementById('searchResults');
-  resultsList.innerHTML = 'Searching...';
+  const resultsTable = document.getElementById('resultsTable');
+  const resultsBody = document.getElementById('resultsBody');
+  const noResults = document.getElementById('noResults');
+
+  resultsBody.innerHTML = '';
+  resultsTable.style.display = 'none';
+  noResults.textContent = 'Searching...';
 
   try {
     const res = await fetch(`/policy/search?q=${encodeURIComponent(query)}`);
     const data = await res.json();
-    resultsList.innerHTML = '';
+    noResults.textContent = '';
 
     if (!data.length) {
-      resultsList.innerHTML = '<li>No results found.</li>';
+      noResults.textContent = 'No results found.';
       return;
     }
 
+    resultsTable.style.display = 'table';
+
     data.forEach(policy => {
-      const li = document.createElement('li');
-      li.innerHTML = `<strong>${policy.policy_name}</strong> -
-        <a href="/${policy.file_path}" target="_blank">View File</a> |
-        <button onclick="editPolicy(${policy.policy_ID})">Edit</a>`;
-      resultsList.appendChild(li);
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><strong>${policy.policy_name}</strong></td>
+        <td><a href="/${policy.file_path}" target="_blank">View File</a></td>
+        <td>
+          <button class="action-btn" onclick="location.href='/Edit_Policy.html?policyID=${policy.policy_ID}'">Edit</button>
+          <button class="action-btn" onclick="location.href='/disposal.html?policyID=${policy.policy_ID}'">Delete</button>
+        </td>
+      `;
+      resultsBody.appendChild(row);
     });
   } catch (err) {
     console.error('Error:', err);
-    resultsList.innerHTML = '<li>Error while searching.</li>';
+    noResults.textContent = 'Error while searching.';
   }
 }
 
