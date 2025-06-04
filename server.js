@@ -28,15 +28,17 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public')); // serve approve.html from public folder
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Use secure access for uploads only
+
+/* Use secure access for uploads only
 app.use('/uploads', authenticateUser, (req, res, next) => {
   if (req.user.role_ID === 1 || req.user.role_ID === 3) {
     return express.static('uploads')(req, res, next);
   } else {
     res.status(403).send('Forbidden: You do not have permission to download files.');
   }
-});
+});*/
 
 app.use('/policy', uploadPolicyRoute);
 app.use('/delete-policy', deletePolicyRoute);
