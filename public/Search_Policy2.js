@@ -37,3 +37,7 @@ async function searchPolicy() {
     noResults.textContent = 'Error while searching.';
   }
 }
+
+function editPolicy(policyId) {
+  window.location.href = `editPolicy.html?id=${policyId}`;
+}

@@ -1,8 +1,13 @@
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
-const cors = require('cors');
 
+const cors = require('cors');
+const app = express();
+const PORT = 3000;
+const mysql = require('mysql2/promise');
+
+// Import route logic
 const fetchRoles = require('./fetchRoles');
 const fetchDepartments = require('./fetchDepartments');
 const addUser = require('./addUser');
@@ -16,9 +21,7 @@ const { deleteUser } = require('./deleteUser');
 const { submitRequest } = require('./request.js');
 const { authenticateUser } = require('./auth');
 
-const app = express();
-const PORT = 3000;
-
+// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -38,6 +41,7 @@ app.use('/delete-policy', deletePolicyRoute);
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Routes
 app.use('/', loginRoutes);
 
 app.get('/getRoles', (req, res) => {
@@ -46,12 +50,17 @@ app.get('/getRoles', (req, res) => {
     .catch(err => res.status(500).send('Error fetching roles: ' + err.message));
 });
 
-app.get('/getDepartments', (req, res) => {
-  fetchDepartments()
-    .then(departments => res.json(departments))
-    .catch(err => res.status(500).send('Error fetching departments: ' + err.message));
+// Get departments
+app.get('/getDepartments', async (req, res) => {
+  try {
+    const departments = await fetchDepartments();
+    res.json(departments);
+  } catch (err) {
+    res.status(500).send('Error fetching departments: ' + err.message);
+  }
 });
 
+// Add user (GET form and POST submission)
 app.get('/addUser', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'Add_User.html'));
 });
@@ -59,17 +68,16 @@ app.get('/addUser', (req, res) => {
 app.post('/addUser', async (req, res) => {
   try {
     const result = await addUser(req.body);
-    res.status(200).send(result.message);
+    res.status(200).send(`<h3>${result.message}</h3><a href="/addUser">Add another user</a>`);
   } catch (err) {
-    res.status(400).send(err.message);
+    res.status(400).send('Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.');
   }
 });
 
 app.post('/submit-request', async (req, res) => {
   try {
-    console.log('Received request:', req.body);
-    await submitRequest(req.body);
-    res.status(200).send('Request submitted successfully');
+    const users = await searchUser(searchTerm);
+    res.status(200).json(users);
   } catch (error) {
     console.error('Error saving request:', error);
     res.status(500).send('Error saving request');
@@ -94,7 +102,6 @@ app.post('/deleteUser', async (req, res) => {
 
 app.post('/editUser', async (req, res) => {
   const { staff_ID, staff_name, staff_email, role_ID, department_ID } = req.body;
-
   if (!staff_ID || !staff_name || !staff_email || !role_ID || !department_ID) {
     return res.status(400).send('All fields are required');
   }
@@ -107,13 +114,13 @@ app.post('/editUser', async (req, res) => {
   }
 });
 
-
-
+// Get user details for editing
 app.get('/getUserDetails', async (req, res) => {
   const { staffID } = req.query;
   if (!staffID) {
     return res.status(400).send('Staff ID is required');
   }
+
   try {
     const user = await editUser.getUserDetails(staffID);
     res.json(user);
@@ -122,15 +129,22 @@ app.get('/getUserDetails', async (req, res) => {
   }
 });
 
-app.get('/searchUser', async (req, res) => {
-  const { searchTerm } = req.query;
+// Delete user
+app.post('/deleteUser', async (req, res) => {
+  const { staff_ID } = req.body;
+  if (!staff_ID) {
+    return res.status(400).send('Missing staff_ID');
+  }
+
   try {
-    const users = await searchUser(searchTerm);
-    res.status(200).json(users);
+    await editUser.deleteUser(staff_ID);
+    res.json({ message: 'User deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).send(error.message);
   }
 });
+
+// ========== Policy Search ==========
 
 app.get('/policy/search', async (req, res) => {
   const query = req.query.q;
