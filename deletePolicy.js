@@ -9,15 +9,14 @@ const router = express.Router();
 
 // DELETE a policy by ID with email notification
 // Apply middlewares: user must be authenticated AND have role_ID === 1 (Admin)
-router.delete('/:id', authenticateUser, checkRole([1]), async (req, res) => {
+router.delete('/:id', authenticateUser, async (req, res) => {
   const policyID = req.params.id;
   const db = connectToDatabase();
-  const deleterStaffID = req.user?.username; // Retrieved from the JWT payload
+  const deleterStaffID = req.user?.username; // From JWT
+  const userRole = req.user?.role_ID;
 
-
-  // 🚫 Missing staff_ID
-  if (!deleterStaffID) {
-    return res.status(401).json({ error: 'Unauthorized: staff_ID not provided' });
+  if (!deleterStaffID || userRole === undefined) {
+    return res.status(401).json({ error: 'Unauthorized: Missing user data' });
   }
 
   try {
@@ -32,7 +31,33 @@ router.delete('/:id', authenticateUser, checkRole([1]), async (req, res) => {
       return res.status(404).json({ error: 'Policy not found' });
     }
 
-    const { policy_name, file_path, department_ID } = policyResults[0];
+    const { policy_name, file_path, department_ID: policyDeptID } = policyResults[0];
+
+    // 2. Authorization logic
+    if (userRole === 1) {
+      // Admin – allowed
+    } else if (userRole === 2) {
+      const [userResults] = await db.promise().query(
+        'SELECT department_ID FROM User WHERE staff_ID = ?',
+        [deleterStaffID]
+      );
+
+      if (userResults.length === 0) {
+        db.end();
+        return res.status(403).json({ error: 'User not found for permission check' });
+      }
+
+      const userDeptID = userResults[0].department_ID;
+      if (userDeptID !== policyDeptID) {
+        db.end();
+        return res.status(403).json({ error: 'Permission denied: Department mismatch' });
+      }
+    } else {
+      db.end();
+      return res.status(403).json({ error: 'Permission denied: Insufficient privileges' });
+    }
+
+    // Continue with file and DB deletion...
 
     // 2. Delete the file if it exists
     try {
@@ -63,7 +88,7 @@ router.delete('/:id', authenticateUser, checkRole([1]), async (req, res) => {
 
     const [departmentUsers] = await db.promise().query(
       'SELECT staff_email, staff_name FROM User WHERE department_ID = ?',
-      [department_ID]
+      [policyDeptID]
     );
 
     db.end();
@@ -102,7 +127,7 @@ If you have any questions, please contact the administrator.
       }
     }
 
-    res.json({ message: 'Policy deleted successfully and notification sent' });
+    res.status(200).json({ message: 'Policy deleted successfully and notification sent' });
   } catch (error) {
     db.end();
     console.error('Error during policy deletion:', error);

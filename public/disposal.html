@@ -11,46 +11,47 @@
 <script>
   const urlParams = new URLSearchParams(window.location.search);
   const policyID = urlParams.get('policyID');
+  const token = localStorage.getItem('token');
 
-  const token = localStorage.getItem('token');  // Retrieve the JWT token
+  const statusEl = document.getElementById('status');
 
   if (!policyID) {
-    document.getElementById('status').textContent = 'No policy ID provided.';
+    statusEl.textContent = 'No policy ID provided.';
   } else if (!token) {
-    document.getElementById('status').textContent = 'Unauthorized: Token missing.';
+    statusEl.textContent = 'Unauthorized: Token missing.';
   } else {
     fetch(`/delete-policy/${policyID}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`  // Include the token in the Authorization header
+        'Authorization': `Bearer ${token}`
       }
     })
     .then(async response => {
-      const errorText = await response.text();
+      let data = {};
+      try {
+        data = await response.json(); // Try parsing as JSON
+      } catch (e) {
+        console.warn('Non-JSON response:', e);
+      }
 
       if (response.status === 403) {
-        document.getElementById('status').textContent = 'Permission Denied: Insufficient Privilege';
+        statusEl.textContent = 'Permission Denied: Insufficient Privilege';
         return;
       }
 
       if (!response.ok) {
-        throw new Error(`Server error ${response.status}: ${errorText}`);
+        statusEl.textContent = `Error: ${data.error || 'Failed to delete policy.'}`;
+        return;
       }
 
-      const data = JSON.parse(errorText);
-      if (data.error) {
-        document.getElementById('status').textContent = `Error: ${data.error}`;
-      } else {
-        document.getElementById('status').textContent = data.message;
-      }
+      statusEl.textContent = data.message || 'Policy deleted successfully.';
     })
     .catch(err => {
       console.error('Delete error:', err);
-      document.getElementById('status').textContent = 'Failed to delete the policy.';
+      statusEl.textContent = 'Failed to delete the policy.';
     });
   }
 </script>
-
 </body>
 </html>
