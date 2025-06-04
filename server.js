@@ -2,8 +2,11 @@ const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const app = express();
+const PORT = 3000;
 const mysql = require('mysql2/promise');
 
+// Import route logic
 const fetchRoles = require('./fetchRoles');
 const fetchDepartments = require('./fetchDepartments');
 const addUser = require('./addUser');
@@ -15,14 +18,9 @@ const deletePolicyRoute = require('./deletePolicy');
 const editUser = require('./editUser');
 const { deleteUser } = require('./deleteUser');
 const { submitRequest } = require('./request.js');
-const { getPendingRequests, updateRequestStatus } = require('./Approval');
+const { authenticateUser } = require('./auth');
 
-// const { exists } = require('fs'); // This is unused — can remove if not needed
-
-const app = express();
-const PORT = 3000;
-
-// Middleware setup
+// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -52,16 +50,22 @@ app.use('/uploads', authenticateUser, (req, res, next) => {
   }
 });
 
-// GET: Roles and Departments
-app.get('/getRoles', async (req, res) => {
-  try {
-    const roles = await fetchRoles();
-    res.json(roles);
-  } catch (err) {
-    res.status(500).send('Error fetching roles: ' + err.message);
-  }
+app.use('/policy', uploadPolicyRoute);
+app.use('/delete-policy', deletePolicyRoute);
+
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Routes
+app.use('/', loginRoutes);
+
+app.get('/getRoles', (req, res) => {
+  fetchRoles()
+    .then(roles => res.json(roles))
+    .catch(err => res.status(500).send('Error fetching roles: ' + err.message));
 });
 
+// Get departments
 app.get('/getDepartments', async (req, res) => {
   try {
     const departments = await fetchDepartments();
@@ -71,25 +75,21 @@ app.get('/getDepartments', async (req, res) => {
   }
 });
 
-// GET: Add User Form
+// Add user (GET form and POST submission)
 app.get('/addUser', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'Add_User.html'));
 });
 
-// POST: Add User
 app.post('/addUser', async (req, res) => {
   try {
-    const userData = req.body;
-    const result = await addUser(userData);
-    res.send(`<h3>${result.message}</h3><a href="/addUser">Add another user</a>`);
+    const result = await addUser(req.body);
+    res.status(200).send(`<h3>${result.message}</h3><a href="/addUser">Add another user</a>`);
   } catch (err) {
     res.status(400).send('Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.');
   }
 });
 
-// GET: Search User
-app.get('/searchUser', async (req, res) => {
-  const { searchTerm } = req.query;
+app.post('/submit-request', async (req, res) => {
   try {
     const users = await searchUser(searchTerm);
     res.status(200).json(users);
@@ -116,7 +116,6 @@ app.post('/deleteUser', async (req, res) => {
 // POST: Edit User
 app.post('/editUser', async (req, res) => {
   const { staff_ID, staff_name, staff_email, role_ID, department_ID } = req.body;
-
   if (!staff_ID || !staff_name || !staff_email || !role_ID || !department_ID) {
     return res.status(400).send('All fields are required');
   }
@@ -129,12 +128,13 @@ app.post('/editUser', async (req, res) => {
   }
 });
 
-// GET: Get user details for editing
+// Get user details for editing
 app.get('/getUserDetails', async (req, res) => {
   const { staffID } = req.query;
   if (!staffID) {
     return res.status(400).send('Staff ID is required');
   }
+
   try {
     const user = await editUser.getUserDetails(staffID);
     res.json(user);
@@ -143,50 +143,23 @@ app.get('/getUserDetails', async (req, res) => {
   }
 });
 
-// POST: Submit request
-app.post('/submit-request', async (req, res) => {
+// Delete user
+app.post('/deleteUser', async (req, res) => {
+  const { staff_ID } = req.body;
+  if (!staff_ID) {
+    return res.status(400).send('Missing staff_ID');
+  }
+
   try {
-    console.log('Received request:', req.body);
-    await submitRequest(req.body);
-    res.status(200).json({ message: 'Request submitted successfully' }); // ✅ FIXED
+    await editUser.deleteUser(staff_ID);
+    res.json({ message: 'User deleted successfully' });
   } catch (error) {
-    console.error('Error saving request:', error);
-    res.status(500).json({ error: 'Error saving request' }); // ✅ send JSON error too
+    res.status(500).send(error.message);
   }
 });
 
+// ========== Policy Search ==========
 
-// GET: Fetch pending requests
-app.get('/pending-requests', async (req, res) => {
-  try {
-    const rows = await getPendingRequests();
-    res.json(rows);
-  } catch (err) {
-    console.error('Error fetching pending requests:', err);
-    res.status(500).send({ error: 'Internal server error' });
-  }
-});
-
-// PUT: Update request status
-app.put('/api/requests/:id', async (req, res) => {
-  const request_ID = req.params.id;
-  const { status } = req.body;
-  console.log('Updating request', request_ID, 'to status', status);
-
-  if (!['APPROVED', 'DENIED'].includes(status?.toUpperCase())) {
-    return res.status(400).json({ error: 'Invalid status. Use Approved or Denied.' });
-  }
-
-  try {
-    const result = await updateRequestStatus(request_ID, status);
-    res.json(result);
-  } catch (err) {
-    console.error('Error updating request status:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// GET: Search policy
 app.get('/policy/search', async (req, res) => {
   const query = req.query.q;
   try {
@@ -198,12 +171,7 @@ app.get('/policy/search', async (req, res) => {
   }
 });
 
-// GET: Serve approval UI
-app.get('/approve', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'approve.html'));
-});
 
-// Start server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
