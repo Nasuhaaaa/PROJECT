@@ -19,6 +19,7 @@ const editUser = require('./editUser');
 const { deleteUser } = require('./deleteUser');
 const { submitRequest } = require('./request.js');
 const { authenticateUser } = require('./auth');
+const { getPendingRequests, updateRequestStatus } = require('./Approval');
 
 // Middleware
 app.use(cors());
@@ -75,6 +76,36 @@ app.get('/getDepartments', async (req, res) => {
   }
 });
 
+app.get('/getPolicyIDs', async (req, res) => {
+  const department_ID = req.query.department_ID;
+
+  if (!department_ID) {
+    return res.status(400).json({ error: 'Missing department_ID' });
+  }
+
+  try {
+    const connection = await mysql.createConnection({
+      host: '127.0.0.1',
+      user: 'root',
+      password: '',
+      database: 'policy management system',
+      port: 3306
+    });
+
+    const [policies] = await connection.execute(
+      'SELECT policy_ID, policy_name FROM policy WHERE department_ID = ?',
+      [department_ID]
+    );
+
+    await connection.end();
+    res.json(policies);
+  } catch (err) {
+    console.error('Error fetching policies:', err);
+    res.status(500).send('Error fetching policies');
+  }
+});
+
+
 // Add user (GET form and POST submission)
 app.get('/addUser', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'Add_User.html'));
@@ -91,16 +122,18 @@ app.post('/addUser', async (req, res) => {
 
 app.post('/submit-request', async (req, res) => {
   try {
-    const users = await searchUser(searchTerm);
-    res.status(200).json(users);
+    console.log('Received request:', req.body);
+    await submitRequest(req.body);
+    res.status(200).json('Request submitted successfully');
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error saving request:', error);
+    res.status(500).json('Error saving request');
   }
 });
 
-// POST: Delete User
 app.post('/deleteUser', async (req, res) => {
   const { staff_ID } = req.body;
+
   if (!staff_ID) {
     return res.status(400).send('Missing staff_ID');
   }
@@ -113,7 +146,6 @@ app.post('/deleteUser', async (req, res) => {
   }
 });
 
-// POST: Edit User
 app.post('/editUser', async (req, res) => {
   const { staff_ID, staff_name, staff_email, role_ID, department_ID } = req.body;
   if (!staff_ID || !staff_name || !staff_email || !role_ID || !department_ID) {
@@ -154,7 +186,7 @@ app.post('/deleteUser', async (req, res) => {
     await editUser.deleteUser(staff_ID);
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
-    res.status(500).send(error.message);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -171,6 +203,35 @@ app.get('/policy/search', async (req, res) => {
   }
 });
 
+//pending request
+app.get('/api/requests/pending', async (req, res) => {
+  try {
+    const rows = await getPendingRequests();
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching pending requests:', err);
+    res.status(500).json({ error:'Internal server errror'});
+  }
+});
+
+// POST update request status
+app.put('/api/requests/:id', async (req, res) => {
+  const request_ID = req.params.id;
+  const { status } = req.body;
+  console.log('Updating request', request_ID, 'to status', status);
+
+  if (!['APPROVED', 'DENIED'].includes(status?.toUpperCase())) {
+    return res.status(400).json({ error: 'Invalid status. Use Approved or Denied.' });
+  }
+
+  try {
+    const result = await updateRequestStatus(request_ID, status);
+    res.json(result);
+  } catch (err) {
+    console.error('Error updating request status:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
