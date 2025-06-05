@@ -49,7 +49,7 @@ router.post('/login', (req, res) => {
     } else {
       // ❌ Failed login for non-existent user
       await logAuditAction({
-        actor_ID: 'SYSTEM',
+        actor_ID: null,
         action_type: 'FAILED_LOGIN',
         description: `Login attempt with invalid staff ID: ${staffId}`,
       });

@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const connectToDatabase = require('./Connection_MySQL');
 const { sendPolicyUpdateEmail } = require('./emailService');
+const logAuditAction = require('./logAuditAction');  // <-- Import audit logger
 
 const router = express.Router();
 const db = connectToDatabase();
@@ -82,14 +83,15 @@ router.post('/upload', upload.single('policyFile'), (req, res) => {
 
       const policy_ID = results.insertId;
 
-      // Audit trail entry
+      // Audit trail entry using centralized function
       try {
-        const auditDescription = `Policy "${policy_name}" uploaded by ${published_by}.`;
-        await db.promise().query(
-          `INSERT INTO Audit (policy_ID, modified_by, change_type, change_description)
-           VALUES (?, ?, ?, ?)`,
-          [policy_ID, modified_by || published_by, 'Upload', auditDescription]
-        );
+        await logAuditAction({
+          actor_ID: modified_by || published_by,
+          action_type: 'UPLOAD_DOCUMENT',
+          policy_ID: policy_ID,
+          policy_name: policy_name,
+          description: `Policy "${policy_name}" uploaded by ${published_by}.`
+        });
       } catch (auditErr) {
         console.error('Audit log failed:', auditErr.message);
         // Continue even if audit fails
