@@ -139,3 +139,29 @@ ADD COLUMN status ENUM('Active', 'Archived') DEFAULT 'Active' AFTER file_path;
 -- Optionally, update current policies to ensure proper status
 UPDATE Policy SET status = 'Active' WHERE status IS NULL;
 
+
+______________________________________________________________________________AUDIT TABLE
+CREATE TABLE Audit (
+    audit_ID INT AUTO_INCREMENT PRIMARY KEY,
+
+    actor_ID VARCHAR(30),
+    actor_name VARCHAR(100),
+
+    action_type ENUM(
+        'LOGIN', 'FAILED_LOGIN',
+        'ADD_USER', 'EDIT_USER', 'DELETE_USER',
+        'UPLOAD_DOCUMENT', 'EDIT_DOCUMENT', 'DELETE_DOCUMENT',
+        'VIEW_DOCUMENT', 'DOWNLOAD_DOCUMENT'
+    ) NOT NULL,
+
+    policy_ID INT DEFAULT NULL,
+    policy_name VARCHAR(255),  -- snapshot of policy name
+
+    description TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (policy_ID) REFERENCES Policy(policy_ID) ON DELETE SET NULL,
+    FOREIGN KEY (actor_ID) REFERENCES User(staff_ID) ON DELETE SET NULL
+);
+
+
