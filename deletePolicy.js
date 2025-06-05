@@ -27,7 +27,6 @@ router.delete('/:id', authenticateUser, async (req, res) => {
     );
 
     if (policyResults.length === 0) {
-      db.end();
       return res.status(404).json({ error: 'Policy not found' });
     }
 
@@ -98,25 +97,18 @@ router.delete('/:id', authenticateUser, async (req, res) => {
     const message = `
 The policy document titled "${policy_name}" (ID: ${policyID}) has been deleted from the system.
 
-Deleted by: ${deleterRows.length ? deleterRows[0].staff_name : 'Unknown User'} (ID: ${deleterStaffID})
+Deleted by: ${deleterRows[0]?.staff_name || 'Unknown User'} (ID: ${deleterStaffID})
 
 If you have any questions, please contact the administrator.
     `.trim();
 
     // Collect unique recipients
     const recipientsSet = new Set();
+    if (deleterRows[0]?.staff_email) recipientsSet.add(deleterRows[0].staff_email);
+    adminRows.forEach(({ staff_email }) => staff_email && recipientsSet.add(staff_email));
+    departmentUsers.forEach(({ staff_email }) => staff_email && recipientsSet.add(staff_email));
 
-    if (deleterRows.length && deleterRows[0].staff_email) {
-      recipientsSet.add(deleterRows[0].staff_email);
-    }
-
-    adminRows.forEach(admin => {
-      if (admin.staff_email) recipientsSet.add(admin.staff_email);
-    });
-
-    departmentUsers.forEach(user => {
-      if (user.staff_email) recipientsSet.add(user.staff_email);
-    });
+    console.log('Notifying recipients:', Array.from(recipientsSet));
 
     // Send emails
     for (const email of recipientsSet) {
@@ -129,7 +121,6 @@ If you have any questions, please contact the administrator.
 
     res.status(200).json({ message: 'Policy deleted successfully and notification sent' });
   } catch (error) {
-    db.end();
     console.error('Error during policy deletion:', error);
     res.status(500).json({ error: 'Failed to delete policy' });
   }
