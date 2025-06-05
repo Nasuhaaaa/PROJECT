@@ -3,16 +3,14 @@ const fs = require('fs');
 const connectToDatabase = require('./Connection_MySQL');
 const { sendPolicyUpdateEmail } = require('./emailService');
 const { authenticateUser, checkRole } = require('./auth'); // adjust path as needed
-
+const logAuditAction = require('./logAuditAction'); // ✅ Import this
 
 const router = express.Router();
 
-// DELETE a policy by ID with email notification
-// Apply middlewares: user must be authenticated AND have role_ID === 1 (Admin)
 router.delete('/:id', authenticateUser, async (req, res) => {
   const policyID = req.params.id;
   const db = connectToDatabase();
-  const deleterStaffID = req.user?.username; // From JWT
+  const deleterStaffID = req.user?.username;
   const userRole = req.user?.role_ID;
 
   if (!deleterStaffID || userRole === undefined) {
@@ -20,7 +18,6 @@ router.delete('/:id', authenticateUser, async (req, res) => {
   }
 
   try {
-    // 1. Get policy details
     const [policyResults] = await db.promise().query(
       'SELECT policy_name, file_path, department_ID FROM Policy WHERE policy_ID = ?',
       [policyID]
@@ -32,7 +29,6 @@ router.delete('/:id', authenticateUser, async (req, res) => {
 
     const { policy_name, file_path, department_ID: policyDeptID } = policyResults[0];
 
-    // 2. Authorization logic
     if (userRole === 1) {
       // Admin – allowed
     } else if (userRole === 2) {
@@ -48,17 +44,33 @@ router.delete('/:id', authenticateUser, async (req, res) => {
 
       const userDeptID = userResults[0].department_ID;
       if (userDeptID !== policyDeptID) {
+        // 🚨 Log unauthorized attempt
+        await logAuditAction({
+          actor_ID: deleterStaffID,
+          action_type: 'UNAUTHORIZED_ACCESS',
+          policy_ID: policyID,
+          policy_name,
+          description: `Permission denied: Department mismatch. User ${deleterStaffID} tried to delete policy "${policy_name}" (ID: ${policyID}).`
+        });
+
         db.end();
         return res.status(403).json({ error: 'Permission denied: Department mismatch' });
       }
     } else {
+      // 🚨 Log unauthorized attempt
+      await logAuditAction({
+        actor_ID: deleterStaffID,
+        action_type: 'UNAUTHORIZED_ACCESS',
+        policy_ID: policyID,
+        policy_name,
+        description: `Permission denied: Insufficient privileges. User ${deleterStaffID} tried to delete policy "${policy_name}" (ID: ${policyID}).`
+      });
+
       db.end();
       return res.status(403).json({ error: 'Permission denied: Insufficient privileges' });
     }
 
-    // Continue with file and DB deletion...
-
-    // 2. Delete the file if it exists
+    // ✅ Delete file
     try {
       if (fs.existsSync(file_path)) {
         fs.unlinkSync(file_path);
@@ -70,10 +82,19 @@ router.delete('/:id', authenticateUser, async (req, res) => {
       console.error('File deletion error:', fsErr.message);
     }
 
-    // 3. Delete the policy from database
+    // ✅ Delete from DB
     await db.promise().query('DELETE FROM Policy WHERE policy_ID = ?', [policyID]);
 
-    // 4. Get emails for notification
+    // ✅ Audit log for successful deletion
+    await logAuditAction({
+      actor_ID: deleterStaffID,
+      action_type: 'DELETE_DOCUMENT',
+      policy_ID: policyID,
+      policy_name,
+      description: `Policy "${policy_name}" (ID: ${policyID}) deleted by ${deleterStaffID}.`
+    });
+
+    // Notify users
     const [deleterRows] = await db.promise().query(
       'SELECT staff_email, staff_name FROM User WHERE staff_ID = ?',
       [deleterStaffID]
@@ -92,17 +113,15 @@ router.delete('/:id', authenticateUser, async (req, res) => {
 
     db.end();
 
-    // Email content
     const subject = `Policy Document Deleted: ${policy_name}`;
     const message = `
-The policy document titled "${policy_name}" (ID: ${policyID}) has been deleted from the system.
+The policy document titled "${policy_name}" (ID: ${policyID}) has been deleted.
 
 Deleted by: ${deleterRows[0]?.staff_name || 'Unknown User'} (ID: ${deleterStaffID})
 
 If you have any questions, please contact the administrator.
     `.trim();
 
-    // Collect unique recipients
     const recipientsSet = new Set();
     if (deleterRows[0]?.staff_email) recipientsSet.add(deleterRows[0].staff_email);
     adminRows.forEach(({ staff_email }) => staff_email && recipientsSet.add(staff_email));
@@ -110,7 +129,6 @@ If you have any questions, please contact the administrator.
 
     console.log('Notifying recipients:', Array.from(recipientsSet));
 
-    // Send emails
     for (const email of recipientsSet) {
       try {
         await sendPolicyUpdateEmail(email, subject, message);
@@ -119,34 +137,10 @@ If you have any questions, please contact the administrator.
       }
     }
 
-    res.status(200).json({ message: 'Policy deleted successfully and notification sent' });
+    res.status(200).json({ message: 'Policy deleted and notification sent' });
   } catch (error) {
     console.error('Error during policy deletion:', error);
     res.status(500).json({ error: 'Failed to delete policy' });
-  }
-});
-
-// Optional: Validate policy existence before deletion
-router.get('/:id/validate', async (req, res) => {
-  const policyID = req.params.id;
-  const db = connectToDatabase();
-
-  try {
-    const [rows] = await db.promise().query(
-      'SELECT policy_name FROM Policy WHERE policy_ID = ?',
-      [policyID]
-    );
-    db.end();
-
-    if (rows.length === 0) {
-      return res.status(404).json({ valid: false, message: 'Policy not found' });
-    }
-
-    return res.json({ valid: true, policyName: rows[0].policy_name });
-  } catch (err) {
-    db.end();
-    console.error('Validation error:', err);
-    return res.status(500).json({ valid: false, error: 'Server error' });
   }
 });
 

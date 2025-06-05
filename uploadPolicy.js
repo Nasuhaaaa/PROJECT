@@ -2,12 +2,13 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const connectToDatabase = require('./Connection_MySQL');
-const { sendPolicyUpdateEmail } = require('./emailService'); //Import email service
+const { sendPolicyUpdateEmail } = require('./emailService');
+const logAuditAction = require('./logAuditAction');  // <-- Import audit logger
 
 const router = express.Router();
 const db = connectToDatabase();
 
-//Configure multer storage
+// Configure multer storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/');
@@ -39,7 +40,6 @@ router.post('/upload', upload.single('policyFile'), (req, res) => {
   const file_path = req.file ? req.file.path : null;
   const date_now = new Date().toISOString().split('T')[0];
 
-  //Validation for missing fields
   if (!file_path) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
@@ -81,7 +81,23 @@ router.post('/upload', upload.single('policyFile'), (req, res) => {
         return res.status(500).json({ error: 'Database error' });
       }
 
-      //Send email notifications to users in the same department with enhanced message
+      const policy_ID = results.insertId;
+
+      // Audit trail entry using centralized function
+      try {
+        await logAuditAction({
+          actor_ID: modified_by || published_by,
+          action_type: 'UPLOAD_DOCUMENT',
+          policy_ID: policy_ID,
+          policy_name: policy_name,
+          description: `Policy "${policy_name}" uploaded by ${published_by}.`
+        });
+      } catch (auditErr) {
+        console.error('Audit log failed:', auditErr.message);
+        // Continue even if audit fails
+      }
+
+      // Email notification to department users
       try {
         const [rows] = await db.promise().query(
           'SELECT staff_email FROM user WHERE department_ID = ?',
@@ -101,13 +117,11 @@ Uploaded by: ${published_by}.
         }
       } catch (emailErr) {
         console.error('Failed to send email notifications:', emailErr.message);
-        //Continue even if email fails
       }
 
-      //Return file URL or path
       res.status(200).json({
-        message: 'Policy uploaded successfully and notifications sent.',
-        policy_ID: results.insertId,
+        message: 'Policy uploaded successfully, audit logged, and notifications sent.',
+        policy_ID: policy_ID,
         file_url: `/uploads/${path.basename(file_path)}`
       });
     }
