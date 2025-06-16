@@ -1,7 +1,6 @@
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
-
 const cors = require('cors');
 const app = express();
 const PORT = 3000;
@@ -15,6 +14,7 @@ const searchUser = require('./searchUser');
 const uploadPolicyRoute = require('./uploadPolicy');
 const searchPolicy = require('./Search_Policy');
 const loginRoutes = require('./login');
+const logoutRoute = require('./logout');
 const deletePolicyRoute = require('./deletePolicy');
 const editUser = require('./editUser');
 const { deleteUser } = require('./deleteUser');
@@ -30,16 +30,7 @@ app.use(express.json());
 app.use(express.static('public')); // serve approve.html from public folder
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-
-/* Use secure access for uploads only
-app.use('/uploads', authenticateUser, (req, res, next) => {
-  if (req.user.role_ID === 1 || req.user.role_ID === 3) {
-    return express.static('uploads')(req, res, next);
-  } else {
-    res.status(403).send('Forbidden: You do not have permission to download files.');
-  }
-});*/
-
+// Upload & delete routes
 app.use('/policy', uploadPolicyRoute);
 app.use('/delete-policy', deletePolicyRoute);
 
@@ -48,14 +39,17 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Routes
 app.use('/', loginRoutes);
+app.use('/logout', logoutRoute); // ✅ Register logout endpoint
 
+
+// Roles
 app.get('/getRoles', (req, res) => {
   fetchRoles()
     .then(roles => res.json(roles))
     .catch(err => res.status(500).send('Error fetching roles: ' + err.message));
 });
 
-// Get departments
+// Departments
 app.get('/getDepartments', async (req, res) => {
   try {
     const departments = await fetchDepartments();
@@ -65,9 +59,9 @@ app.get('/getDepartments', async (req, res) => {
   }
 });
 
+// Policy IDs by Department
 app.get('/getPolicyIDs', async (req, res) => {
   const department_ID = req.query.department_ID;
-
   if (!department_ID) {
     return res.status(400).json({ error: 'Missing department_ID' });
   }
@@ -94,11 +88,12 @@ app.get('/getPolicyIDs', async (req, res) => {
   }
 });
 
-// Add user (GET form and POST submission)
+// Add user page
 app.get('/addUser', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'Add_User.html'));
 });
 
+// Add user logic
 app.post('/addUser', async (req, res) => {
   try {
     const result = await addUser(req.body);
@@ -108,6 +103,7 @@ app.post('/addUser', async (req, res) => {
   }
 });
 
+// Submit request
 app.post('/submit-request', async (req, res) => {
   try {
     console.log('Received request:', req.body);
@@ -119,9 +115,9 @@ app.post('/submit-request', async (req, res) => {
   }
 });
 
+// Delete user
 app.post('/deleteUser', async (req, res) => {
   const { staff_ID } = req.body;
-
   if (!staff_ID) {
     return res.status(400).send('Missing staff_ID');
   }
@@ -134,6 +130,7 @@ app.post('/deleteUser', async (req, res) => {
   }
 });
 
+// Edit user
 app.post('/editUser', async (req, res) => {
   const { staff_ID, staff_name, staff_email, role_ID, department_ID } = req.body;
   if (!staff_ID || !staff_name || !staff_email || !role_ID || !department_ID) {
@@ -163,6 +160,7 @@ app.get('/getUserDetails', async (req, res) => {
   }
 });
 
+// Search user
 app.get('/searchUser', async (req, res) => {
   const { searchTerm } = req.query;
   try {
@@ -173,15 +171,11 @@ app.get('/searchUser', async (req, res) => {
   }
 });
 
-//--------------------------FORGOT PASSWORD-------------------------------------------------//
-
-// Serve forgot password form
+// Forgot Password
 app.get('/forgot-password', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'forgotpassword.html'));
 });
 
-
-// Handle reset password POST (without bcrypt)
 app.post('/reset-password', async (req, res) => {
   const { email, newPassword } = req.body;
 
@@ -193,14 +187,14 @@ app.post('/reset-password', async (req, res) => {
       database: 'policy management system',
       port: 3306
     });
-const [users] = await connection.execute('SELECT * FROM user WHERE staff_email = ?', [email]);
+
+    const [users] = await connection.execute('SELECT * FROM user WHERE staff_email = ?', [email]);
 
     if (users.length === 0) {
       await connection.end();
       return res.send('No user found with this email.');
     }
 
-    // Directly update password (PLAIN TEXT)
     await connection.execute('UPDATE user SET password = ? WHERE staff_email = ?', [newPassword, email]);
     await connection.end();
 
@@ -211,6 +205,7 @@ const [users] = await connection.execute('SELECT * FROM user WHERE staff_email =
   }
 });
 
+// Search policy
 app.get('/policy/search', async (req, res) => {
   const query = req.query.q;
   try {
@@ -222,18 +217,18 @@ app.get('/policy/search', async (req, res) => {
   }
 });
 
-//pending request
+// Pending requests
 app.get('/api/requests/pending', async (req, res) => {
   try {
     const rows = await getPendingRequests();
     res.json(rows);
   } catch (err) {
     console.error('Error fetching pending requests:', err);
-    res.status(500).json({ error:'Internal server errror'});
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// POST update request status
+// Approve/Deny request
 app.put('/api/requests/:id', async (req, res) => {
   const request_ID = req.params.id;
   const { status } = req.body;
