@@ -2,44 +2,45 @@ async function loginUser() {
   const staffId = document.getElementById('staffId').value;
   const password = document.getElementById('password').value;
 
-  const response = await fetch('http://localhost:3000/login', {  // Correct backend URL
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ staffId, password })
-  });
+  try {
+    const response = await fetch('http://localhost:3000/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ staffId, password }),
+    });
 
-  const data = await response.json();
+    if (response.ok) {
+      const data = await response.json();
 
-  if (response.ok) {
-    // Store the JWT token in localStorage
-    localStorage.setItem('token', data.token);
+      // Store the JWT token in localStorage
+      localStorage.setItem('token', data.token);
 
-    // Decode the JWT token to get user information (role_ID)
-    const decodedToken = JSON.parse(atob(data.token.split('.')[1])); // Decode the JWT to get the payload
-    console.log('Decoded Token:', decodedToken);  // Log the decoded token for inspection
+      // Decode the JWT token payload
+      const decodedToken = JSON.parse(atob(data.token.split('.')[1]));
+      const role_ID = decodedToken.role_ID;
 
-    const role_ID = decodedToken.role_ID; // Get the role_ID from the decoded token
-
-    // Check if role_ID is correct
-    console.log('Role ID:', role_ID);  // Check role_ID value
-
-    // Redirect based on the role_ID
-    if (role_ID === 1) {  // If role_ID is 1, redirect to Admin Dashboard
-      window.location.href = '/admin_dashboard.html';  // Redirect to Admin Dashboard
-    } else if (role_ID === 2) {  // If role_ID is 2, redirect to User Dashboard
-      window.location.href = '/editor_dashboard.html';   // Redirect to User Dashboard
-    } else if (role_ID === 3) {
-      window.location.href = '/user_dashboard.html';   // Redirect to User Dashboard
+      // Redirect based on role_ID
+      if (role_ID === 1) {
+        window.location.href = '/admin_dashboard.html';
+      } else if (role_ID === 2) {
+        window.location.href = '/editor_dashboard.html';
+      } else if (role_ID === 3) {
+        window.location.href = '/user_dashboard.html';
+      } else {
+        alert('Invalid role ID');
+      }
     } else {
-      alert('Invalid role ID');  // In case the role ID is unknown
+      const errorText = await response.text();
+      alert(errorText); // Show error message from backend (e.g. "Incorrect password" or "Staff ID not found")
     }
-  } else {
-    alert(data.message);  // Display error message if login fails
+  } catch (err) {
+    alert('Network or server error');
+    console.error('Login error:', err);
   }
 }
 
-// Event listener for form submission
+// Attach event listener to your form
 document.getElementById('loginForm').addEventListener('submit', (e) => {
-  e.preventDefault();  // Prevent form from reloading the page
-  loginUser();  // Call the loginUser function when form is submitted
+  e.preventDefault();
+  loginUser();
 });
