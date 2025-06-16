@@ -1,6 +1,8 @@
 async function loginUser() {
   const staffId = document.getElementById('staffId').value;
   const password = document.getElementById('password').value;
+  const errorMsg = document.getElementById('errorMsg');
+  errorMsg.textContent = ''; // Clear previous errors
 
   try {
     const response = await fetch('http://localhost:3000/login', {
@@ -27,14 +29,14 @@ async function loginUser() {
       } else if (role_ID === 3) {
         window.location.href = '/user_dashboard.html';
       } else {
-        alert('Invalid role ID');
+        errorMsg.textContent = 'Invalid role ID.';
       }
     } else {
       const errorText = await response.text();
-      alert(errorText); // Show error message from backend (e.g. "Incorrect password" or "Staff ID not found")
+      errorMsg.textContent = errorText; // Display backend message (e.g., "Incorrect password")
     }
   } catch (err) {
-    alert('Network or server error');
+    errorMsg.textContent = 'Network or server error';
     console.error('Login error:', err);
   }
 }

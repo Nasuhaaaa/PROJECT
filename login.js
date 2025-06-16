@@ -51,7 +51,7 @@ router.post('/login', (req, res) => {
           description: 'User entered incorrect password',
         });
 
-        return res.status(401).send('Invalid credentials');
+        return res.status(401).send('Incorrect Password');
       }
     } else {
       // ❌ Failed login for non-existent user
@@ -61,7 +61,7 @@ router.post('/login', (req, res) => {
         description: `Login attempt with invalid staff ID: ${staffId}`,
       });
 
-      return res.status(401).send('Invalid credentials');
+      return res.status(401).send('Invalid Staff ID');
     }
   });
 });
