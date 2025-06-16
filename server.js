@@ -21,6 +21,8 @@ const { deleteUser } = require('./deleteUser');
 const { submitRequest } = require('./request.js');
 const { authenticateUser } = require('./auth');
 const { getPendingRequests, updateRequestStatus } = require('./Approval');
+const displayAudit = require('./displayAudit');
+
 
 // Middleware
 app.use(cors());
@@ -245,6 +247,14 @@ app.put('/api/requests/:id', async (req, res) => {
     console.error('Error updating request status:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+// Use audit route for API
+app.use('/api', displayAudit);
+
+// Route to open the audit HTML page
+app.get('/audit-table', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'auditTable.html'));
 });
 
 app.listen(PORT, () => {
