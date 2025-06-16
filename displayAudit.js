@@ -3,18 +3,33 @@ const express = require('express');
 const router = express.Router();
 const connectToDatabase = require('./Connection_MySQL');
 
-// API route to get audit data as JSON with optional date filter
 router.get('/audit', (req, res) => {
   const connection = connectToDatabase();
 
   let query = 'SELECT * FROM audit';
+  const conditions = [];
   const params = [];
 
-  // Check for date filtering
-  const { start, end } = req.query;
+  const { start, end, action, search } = req.query;
+
   if (start && end) {
-    query += ' WHERE timestamp BETWEEN ? AND ?';
+    conditions.push('timestamp BETWEEN ? AND ?');
     params.push(start + ' 00:00:00', end + ' 23:59:59');
+  }
+
+  if (action && action !== 'ALL') {
+    conditions.push('action_type = ?');
+    params.push(action);
+  }
+
+  if (search) {
+    conditions.push('(actor_ID LIKE ? OR actor_name LIKE ?)');
+    const wildcard = `%${search}%`;
+    params.push(wildcard, wildcard);
+  }
+
+  if (conditions.length > 0) {
+    query += ' WHERE ' + conditions.join(' AND ');
   }
 
   query += ' ORDER BY timestamp DESC';
@@ -27,6 +42,27 @@ router.get('/audit', (req, res) => {
     }
 
     res.json(results);
+  });
+
+  connection.end();
+});
+
+
+// API route to get distinct action types
+router.get('/audit/actions', (req, res) => {
+  const connection = connectToDatabase();
+
+  const query = 'SELECT DISTINCT action_type FROM audit ORDER BY action_type';
+
+  connection.query(query, (err, results) => {
+    if (err) {
+      console.error('Error fetching action types:', err);
+      res.status(500).send('Internal Server Error');
+      return;
+    }
+
+    const actions = results.map(row => row.action_type);
+    res.json(actions);
   });
 
   connection.end();
