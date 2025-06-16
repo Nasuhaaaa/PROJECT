@@ -23,10 +23,17 @@ router.post('/login', (req, res) => {
       const user = results[0];
 
       if (user.password === password) {
+        // const token = generateToken({
+        //   username: user.staff_ID,
+        //   role_ID: user.role_ID,
+        // });
         const token = generateToken({
-          username: user.staff_ID,
-          role_ID: user.role_ID,
-        });
+  username: user.staff_ID,
+  role_ID: user.role_ID,
+  staff_ID: user.staff_ID,
+  department_ID: user.department_ID
+});
+
 
         // ✅ Successful login audit log
         await logAuditAction({
