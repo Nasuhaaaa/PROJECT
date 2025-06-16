@@ -27,7 +27,11 @@ const fileFilter = (req, file, cb) => {
   cb(null, allowedTypes.includes(ext) ? true : new Error('Only PDF and DOCX files are allowed'));
 };
 
-const upload = multer({ storage, fileFilter });
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 } // Optional: 5 MB file size limit
+});
 
 router.post('/upload', authenticateUser, upload.single('policyFile'), (req, res) => {
   const {
@@ -42,7 +46,7 @@ router.post('/upload', authenticateUser, upload.single('policyFile'), (req, res)
   const published_by = req.user.staff_ID;
   const modified_by = req.user.staff_ID;
 
-  if (!file_path || !policy_name || !department_ID || !published_by || !file_format) {
+  if (!file_path || !policy_name || !file_format) {
     return res.status(400).json({ error: 'Missing required policy information or file' });
   }
 
@@ -51,7 +55,7 @@ router.post('/upload', authenticateUser, upload.single('policyFile'), (req, res)
 
   if (uploadedExt !== declaredFormat) {
     return res.status(400).json({
-      error: `File format mismatch: uploaded (${uploadedExt}) vs selected (${declaredFormat})`
+      error: `File format mismatch. You selected "${file_format}", but uploaded "${req.file.originalname}".`
     });
   }
 
@@ -81,6 +85,7 @@ router.post('/upload', authenticateUser, upload.single('policyFile'), (req, res)
 
       const policy_ID = results.insertId;
 
+      // Log audit
       try {
         await logAuditAction({
           actor_ID: published_by,
@@ -93,15 +98,25 @@ router.post('/upload', authenticateUser, upload.single('policyFile'), (req, res)
         console.error('Audit logging failed:', auditErr.message);
       }
 
+      // Email notification
       try {
         const [rows] = await db.promise().query(
           'SELECT staff_email FROM user WHERE department_ID = ?',
           [department_ID]
         );
 
+        const [uploaderRows] = await db.promise().query(
+          'SELECT staff_name FROM user WHERE staff_ID = ?',
+          [published_by]
+        );
+        const uploaderName = uploaderRows[0]?.staff_name || 'Unknown User';
+
         const message = `
 A new policy titled "${policy_name}" was uploaded on ${date_now}.
-Check the system for more details. Uploaded by staff ID: ${published_by}.
+
+Uploaded by: ${uploaderName} (ID: ${published_by})
+
+Check the system for more details.
         `.trim();
 
         for (const user of rows) {
