@@ -100,27 +100,41 @@ router.post('/upload', authenticateUser, upload.single('policyFile'), (req, res)
 
       // Email notification
       try {
+        // Fetch uploader info
+        const [uploaderRows] = await db.promise().query(
+          'SELECT staff_email, staff_name FROM user WHERE staff_ID = ?',
+          [published_by]
+        );
+        const uploaderEmail = uploaderRows[0]?.staff_email;
+        const uploaderName = uploaderRows[0]?.staff_name || 'Unknown User';
+
+        // Fetch department members
         const [rows] = await db.promise().query(
           'SELECT staff_email FROM user WHERE department_ID = ?',
           [department_ID]
         );
 
-        const [uploaderRows] = await db.promise().query(
-          'SELECT staff_name FROM user WHERE staff_ID = ?',
-          [published_by]
-        );
-        const uploaderName = uploaderRows[0]?.staff_name || 'Unknown User';
-
         const message = `
 A new policy titled "${policy_name}" was uploaded on ${date_now}.
 
 Uploaded by: ${uploaderName} (ID: ${published_by})
+Format: ${file_format.toUpperCase()}
 
 Check the system for more details.
         `.trim();
 
+        // Notify uploader
+        if (uploaderEmail) {
+          await sendPolicyUpdateEmail(
+            uploaderEmail,
+            'Your Policy Upload Was Successful',
+            `Hi ${uploaderName},\n\nYour policy "${policy_name}" has been successfully uploaded to the system on ${date_now}.\n\nFile Format: ${file_format.toUpperCase()}\n\nYou can now view or manage it in the system.`
+          );
+        }
+
+        // Notify other users in department
         for (const user of rows) {
-          if (user.staff_email) {
+          if (user.staff_email && user.staff_email !== uploaderEmail) {
             await sendPolicyUpdateEmail(user.staff_email, 'New Policy Uploaded', message);
           }
         }
