@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Audit Trail</title>
+  <style>
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    label, input, select, button { margin: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Audit Trail</h1>
+
+  <form id="filterForm">
+    <label>Start Date: <input type="date" id="startDate"></label>
+    <label>End Date: <input type="date" id="endDate"></label>
+    <label>Action Type: 
+      <select id="actionFilter">
+        <option value="ALL">All</option>
+      </select>
+    </label>
+    <label>Search (Actor ID/Name): 
+      <input type="text" id="searchInput" placeholder="Enter name or ID">
+    </label>
+    <button type="submit">Filter</button>
+    <button type="button" onclick="resetFilters()">Clear</button>
+  </form>
+
+  <table id="auditTable">
+    <thead>
+      <tr>
+        <th>Audit ID</th>
+        <th>Actor ID</th>
+        <th>Actor Name</th>
+        <th>Action Type</th>
+        <th>Policy ID</th>
+        <th>Policy Name</th>
+        <th>Description</th>
+        <th>Timestamp</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const tbody = document.querySelector('#auditTable tbody');
+    const actionFilter = document.getElementById('actionFilter');
+
+    async function loadActions() {
+      const res = await fetch('/api/audit/actions');
+      const actions = await res.json();
+      actions.forEach(act => {
+        const option = document.createElement('option');
+        option.value = act;
+        option.textContent = act;
+        actionFilter.appendChild(option);
+      });
+    }
+
+    function loadAuditData(filters = {}) {
+      tbody.innerHTML = ''; // Clear table
+
+      const params = new URLSearchParams(filters);
+      fetch('/api/audit?' + params.toString())
+        .then(res => res.json())
+        .then(data => {
+          data.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${row.audit_ID}</td>
+              <td>${row.actor_ID ?? '-'}</td>
+              <td>${row.actor_name ?? '-'}</td>
+              <td>${row.action_type}</td>
+              <td>${row.policy_ID ?? '-'}</td>
+              <td>${row.policy_name ?? '-'}</td>
+              <td>${row.description}</td>
+              <td>${new Date(row.timestamp).toLocaleString()}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        })
+        .catch(error => console.error('Error fetching audit data:', error));
+    }
+
+    // Form submit handler
+    document.getElementById('filterForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const filters = {
+        start: document.getElementById('startDate').value,
+        end: document.getElementById('endDate').value,
+        action: document.getElementById('actionFilter').value,
+        search: document.getElementById('searchInput').value.trim()
+      };
+      loadAuditData(filters);
+    });
+
+    function resetFilters() {
+      document.getElementById('startDate').value = '';
+      document.getElementById('endDate').value = '';
+      document.getElementById('actionFilter').value = 'ALL';
+      document.getElementById('searchInput').value = '';
+      loadAuditData();
+    }
+
+    // Initial setup
+    loadActions().then(loadAuditData);
+  </script>
+</body>
+</html>

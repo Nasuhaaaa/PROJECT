@@ -3,6 +3,8 @@ const multer = require('multer');
 const path = require('path');
 const connectToDatabase = require('./Connection_MySQL');
 const { sendPolicyUpdateEmail } = require('./emailService');
+const logAuditAction = require('./logAuditAction');
+const { authenticateUser } = require('./auth');
 
 const router = express.Router();
 const db = connectToDatabase();
@@ -25,34 +27,35 @@ const fileFilter = (req, file, cb) => {
   cb(null, allowedTypes.includes(ext) ? true : new Error('Only PDF and DOCX files are allowed'));
 };
 
-const upload = multer({ storage, fileFilter });
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 } // Optional: 5 MB file size limit
+});
 
-router.post('/upload', upload.single('policyFile'), (req, res) => {
+router.post('/upload', authenticateUser, upload.single('policyFile'), (req, res) => {
   const {
     policy_name,
-    department_ID,
-    published_by,
-    modified_by,
     file_format
   } = req.body;
 
   const file_path = req.file ? req.file.path : null;
   const date_now = new Date().toISOString().split('T')[0];
 
-  if (!file_path) {
-    return res.status(400).json({ error: 'No file uploaded' });
+  const department_ID = req.user.department_ID;
+  const published_by = req.user.staff_ID;
+  const modified_by = req.user.staff_ID;
+
+  if (!file_path || !policy_name || !file_format) {
+    return res.status(400).json({ error: 'Missing required policy information or file' });
   }
 
-  if (!policy_name || !department_ID || !published_by || !file_format) {
-    return res.status(400).json({ error: 'Missing required policy information' });
-  }
-
-  const uploadedFileExt = path.extname(req.file.originalname).toLowerCase();
+  const uploadedExt = path.extname(req.file.originalname).toLowerCase();
   const declaredFormat = file_format.startsWith('.') ? file_format.toLowerCase() : '.' + file_format.toLowerCase();
 
-  if (uploadedFileExt !== declaredFormat) {
+  if (uploadedExt !== declaredFormat) {
     return res.status(400).json({
-      error: `Uploaded file format (${uploadedFileExt}) does not match the selected format (${declaredFormat}).`
+      error: `File format mismatch. You selected "${file_format}", but uploaded "${req.file.originalname}".`
     });
   }
 
@@ -70,56 +73,78 @@ router.post('/upload', upload.single('policyFile'), (req, res) => {
       date_now,
       published_by,
       date_now,
-      modified_by && modified_by.trim() !== '' ? modified_by : null,
+      modified_by,
       file_format,
       file_path
     ],
     async (err, results) => {
       if (err) {
-        console.error('Error inserting policy:', err);
+        console.error('Database insert error:', err);
         return res.status(500).json({ error: 'Database error' });
       }
 
       const policy_ID = results.insertId;
 
-      // Audit trail entry
+      // Log audit
       try {
-        const auditDescription = `Policy "${policy_name}" uploaded by ${published_by}.`;
-        await db.promise().query(
-          `INSERT INTO Audit (policy_ID, modified_by, change_type, change_description)
-           VALUES (?, ?, ?, ?)`,
-          [policy_ID, modified_by || published_by, 'Upload', auditDescription]
-        );
+        await logAuditAction({
+          actor_ID: published_by,
+          action_type: 'UPLOAD_DOCUMENT',
+          policy_ID,
+          policy_name,
+          description: `Policy "${policy_name}" uploaded by staff_ID ${published_by}.`
+        });
       } catch (auditErr) {
-        console.error('Audit log failed:', auditErr.message);
-        // Continue even if audit fails
+        console.error('Audit logging failed:', auditErr.message);
       }
 
-      // Email notification to department users
+      // Email notification
       try {
+        // Fetch uploader info
+        const [uploaderRows] = await db.promise().query(
+          'SELECT staff_email, staff_name FROM user WHERE staff_ID = ?',
+          [published_by]
+        );
+        const uploaderEmail = uploaderRows[0]?.staff_email;
+        const uploaderName = uploaderRows[0]?.staff_name || 'Unknown User';
+
+        // Fetch department members
         const [rows] = await db.promise().query(
           'SELECT staff_email FROM user WHERE department_ID = ?',
           [department_ID]
         );
 
         const message = `
-A new policy titled "${policy_name}" has been uploaded on ${date_now}.
-Please check the document management system for more details.
-Uploaded by: ${published_by}.
+A new policy titled "${policy_name}" was uploaded on ${date_now}.
+
+Uploaded by: ${uploaderName} (ID: ${published_by})
+Format: ${file_format.toUpperCase()}
+
+Check the system for more details.
         `.trim();
 
+        // Notify uploader
+        if (uploaderEmail) {
+          await sendPolicyUpdateEmail(
+            uploaderEmail,
+            'Your Policy Upload Was Successful',
+            `Hi ${uploaderName},\n\nYour policy "${policy_name}" has been successfully uploaded to the system on ${date_now}.\n\nFile Format: ${file_format.toUpperCase()}\n\nYou can now view or manage it in the system.`
+          );
+        }
+
+        // Notify other users in department
         for (const user of rows) {
-          if (user.staff_email) {
+          if (user.staff_email && user.staff_email !== uploaderEmail) {
             await sendPolicyUpdateEmail(user.staff_email, 'New Policy Uploaded', message);
           }
         }
       } catch (emailErr) {
-        console.error('Failed to send email notifications:', emailErr.message);
+        console.error('Email notification failed:', emailErr.message);
       }
 
       res.status(200).json({
-        message: 'Policy uploaded successfully, audit logged, and notifications sent.',
-        policy_ID: policy_ID,
+        message: 'Upload successful, audit logged, emails sent.',
+        policy_ID,
         file_url: `/uploads/${path.basename(file_path)}`
       });
     }

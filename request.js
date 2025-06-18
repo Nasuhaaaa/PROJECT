@@ -13,16 +13,15 @@ const dbConfig = {
 function validateRequestData(data) {
   const { staff_ID, action, policy_ID, department_ID } = data;
 
-  if (!staff_ID || !action || !department_ID) {
-    throw new Error('Missing required fields: staff_ID, action, or department_ID');
-  }
+  if (!staff_ID) throw new Error('Missing required field: staff_ID');
+  if (!action) throw new Error('Missing required field: action');
+  if (!department_ID) throw new Error('Missing required field: department_ID');
 
   const allowedActions = ['view', 'upload', 'delete', 'edit'];
   if (!allowedActions.includes(action.toLowerCase())) {
     throw new Error(`Invalid action: ${action}`);
   }
 
-  // For actions other than 'upload', policy_ID is required
   if (action.toLowerCase() !== 'upload' && !policy_ID) {
     throw new Error('policy_ID is required for this action');
   }
@@ -38,6 +37,15 @@ async function getPolicyName(connection, policy_ID) {
   );
 
   return row?.policy_name || 'Unknown Policy';
+}
+
+// Fetch actor name (staff_name)
+async function getActorName(connection, actor_ID) {
+  const [[row]] = await connection.execute(
+    'SELECT staff_name FROM User WHERE staff_ID = ?',
+    [actor_ID]
+  );
+  return row?.staff_name || 'Unknown User';
 }
 
 // Fetch permission ID
@@ -95,9 +103,9 @@ User ${staff_ID} has submitted a request to ${action} the policy "${policyName}"
 Thank you.
 `;
 
-  for (const admin of adminRows) {
-    await sendPolicyUpdateEmail(admin.staff_email, subject, body);
-  }
+  await Promise.all(adminRows.map(admin =>
+    sendPolicyUpdateEmail(admin.staff_email, subject, body)
+  ));
 }
 
 // Main function to submit request
@@ -138,16 +146,30 @@ async function submitRequest(data) {
       [staff_ID, policy_ID || null, permissionID]
     );
 
-    // Insert audit trail
+    // Prepare audit data
+    const actorName = await getActorName(connection, staff_ID);
+    const policyName = await getPolicyName(connection, policy_ID);
+
+    // Map action to audit action_type enum values
+    const actionMap = {
+      upload: 'UPLOAD_DOCUMENT',
+      edit: 'EDIT_DOCUMENT',
+      delete: 'DELETE_DOCUMENT',
+      view: 'VIEW_DOCUMENT'
+    };
+
+    const auditActionType = actionMap[actionLower] || 'VIEW_DOCUMENT';
+
     const auditDescription = `Permission request submitted for "${actionLower}" on policy ID ${policy_ID || 'N/A'} by ${staff_ID}.`;
 
+    // Insert audit trail
     await connection.execute(
-      `INSERT INTO Audit (policy_ID, modified_by, change_type, change_description)
-       VALUES (?, ?, 'Permission Request', ?)`,
-      [policy_ID || null, staff_ID, auditDescription]
+      `INSERT INTO Audit 
+       (actor_ID, actor_name, action_type, policy_ID, policy_name, description) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [staff_ID, actorName, auditActionType, policy_ID || null, policyName, auditDescription]
     );
 
-    // Commit transaction
     await connection.commit();
 
     // Notify user and admins
