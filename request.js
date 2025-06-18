@@ -140,11 +140,12 @@ async function submitRequest(data) {
 
     // Insert permission request
     await connection.execute(
-      `INSERT INTO Permission_Request 
-       (staff_ID, policy_ID, permission_ID, request_date, status)
-       VALUES (?, ?, ?, CURRENT_TIMESTAMP, 'Pending')`,
-      [staff_ID, policy_ID || null, permissionID]
-    );
+    `INSERT INTO Permission_Request 
+    (staff_ID, policy_ID, permission_ID, action_type, request_date, status)
+    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, 'Pending')`,
+    [staff_ID, policy_ID || null, permissionID, actionLower]
+  );
+
 
     // Prepare audit data
     const actorName = await getActorName(connection, staff_ID);

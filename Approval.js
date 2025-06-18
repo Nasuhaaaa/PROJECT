@@ -1,6 +1,6 @@
-// approval.js
 const mysql = require('mysql2/promise');
 
+// Define connection config inline
 const dbConfig = {
   host: '127.0.0.1',
   user: 'root',
@@ -9,6 +9,7 @@ const dbConfig = {
   port: 3306
 };
 
+// Fetch all pending requests
 async function getPendingRequests() {
   const connection = await mysql.createConnection(dbConfig);
   try {
@@ -27,21 +28,44 @@ async function getPendingRequests() {
   }
 }
 
-//approve or reject 
 async function updateRequestStatus(request_ID, newStatus) {
   const connection = await mysql.createConnection(dbConfig);
   try {
+    // Get request details (staff_ID, policy_ID, permission_ID)
+    const [requestRows] = await connection.execute(`
+      SELECT staff_ID, policy_ID, permission_ID 
+      FROM permission_request 
+      WHERE request_ID = ?
+    `, [request_ID]);
 
+    if (requestRows.length === 0) {
+      throw new Error('Request not found');
+    }
+
+    const { staff_ID, policy_ID, permission_ID } = requestRows[0];
+
+    // Update the request status
     await connection.execute(`
       UPDATE permission_request
       SET status = ?, decision_at = CURRENT_TIMESTAMP
       WHERE request_ID = ?
     `, [newStatus, request_ID]);
 
+    // If approved, insert into access_right
+    if (newStatus === 'Approved') {
+      const valid_from = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+      await connection.execute(`
+        INSERT INTO access_right (policy_ID, permission_ID, staff_ID, valid_from)
+        VALUES (?, ?, ?, ?)
+      `, [policy_ID, permission_ID, staff_ID, valid_from]);
+    }
+
     return { message: `Request ${newStatus.toLowerCase()} successfully.` };
   } finally {
     await connection.end();
   }
 }
+
 
 module.exports = { getPendingRequests, updateRequestStatus };
