@@ -21,6 +21,7 @@ const { deleteUser } = require('./deleteUser');
 const { submitRequest } = require('./request.js');
 const { authenticateUser } = require('./auth');
 const { getPendingRequests, updateRequestStatus } = require('./Approval');
+const policyRoutes = require('./EditedPolicy');
 
 // Middleware
 app.use(cors());
@@ -29,6 +30,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public')); // serve approve.html from public folder
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/edited_uploads', express.static(path.join(__dirname, 'edited_uploads')));
 
 
 /* Use secure access for uploads only
@@ -42,12 +44,14 @@ app.use('/uploads', authenticateUser, (req, res, next) => {
 
 app.use('/policy', uploadPolicyRoute);
 app.use('/delete-policy', deletePolicyRoute);
+app.use('/', policyRoutes); // EditedPolicy.js
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Routes
 app.use('/', loginRoutes);
+//app.use('/', policyRoutes);
 
 app.get('/getRoles', (req, res) => {
   fetchRoles()
@@ -211,6 +215,7 @@ const [users] = await connection.execute('SELECT * FROM user WHERE staff_email =
   }
 });
 
+//-----------SEARCH POLICY-----------------------------
 app.get('/policy/search', async (req, res) => {
   const query = req.query.q;
   try {
@@ -251,6 +256,7 @@ app.put('/api/requests/:id', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
