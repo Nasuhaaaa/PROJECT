@@ -17,7 +17,7 @@ async function getPendingRequests() {
     const [rows] = await connection.execute(`
       SELECT r.request_ID, r.staff_ID, r.policy_ID, r.status, r.action_type, r.request_date AS request_at,
              u.staff_name, 
-             COALESCE(p.policy_name, 'Deleted Policy') AS policy_name
+             COALESCE(p.policy_name, 'NULL') AS policy_name
       FROM permission_request r
       JOIN user u ON r.staff_ID = u.staff_ID
       LEFT JOIN policy p ON r.policy_ID = p.policy_ID
@@ -35,15 +35,15 @@ async function updateRequestStatus(request_ID, newStatus) {
   const connection = await mysql.createConnection(dbConfig);
   try {
     // Get request details (staff_ID, policy_ID, permission_ID)
-    const [requestRows] = await connection.execute(`
-      SELECT r.staff_ID, r.policy_ID, r.permission_ID,
-             u.staff_name, u.staff_email, u.department_ID,
-             p.policy_name
-      FROM permission_request r
-      JOIN user u ON r.staff_ID = u.staff_ID
-      JOIN policy p ON r.policy_ID = p.policy_ID
-      WHERE r.request_ID = ?
-    `, [request_ID]);
+   const [requestRows] = await connection.execute(`
+    SELECT r.staff_ID, r.policy_ID, r.permission_ID,
+          u.staff_name, u.staff_email, u.department_ID,
+          COALESCE(p.policy_name, 'Deleted Policy') AS policy_name
+    FROM permission_request r
+    JOIN user u ON r.staff_ID = u.staff_ID
+    LEFT JOIN policy p ON r.policy_ID = p.policy_ID
+    WHERE r.request_ID = ?
+  `, [request_ID]);
 
     if (requestRows.length === 0) {
       throw new Error('Request not found');
