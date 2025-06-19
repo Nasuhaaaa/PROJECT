@@ -51,96 +51,126 @@ router.delete('/:id', authenticateUser, async (req, res) => {
             const actor_name = userResults[0].staff_name;
             const userDeptID = userResults[0].department_ID;
 
-            if (!hasDeletePermission(userRole, userDeptID, policyDeptID)) {
-              await safeAuditLog({
-                actor_ID: deleterStaffID,
-                actor_name,
-                action_type: 'UNAUTHORIZED_ACCESS',
-                policy_ID: policyID,
-                policy_name,
-                description: `Permission denied. User ${deleterStaffID} attempted to delete policy "${policy_name}".`
-              });
-              db.rollback(() => {});
-              return res.status(403).json({ error: 'Permission denied' });
-            }
-
-            try {
-              if (fs.existsSync(file_path)) {
-                fs.unlinkSync(file_path);
-              }
-
-              db.query('DELETE FROM Policy WHERE policy_ID = ?', [policyID], async (err) => {
-                if (err) {
+            // 🔍 Dynamically get permission_ID for "Delete Document"
+            db.query(
+              'SELECT permission_ID FROM Permission WHERE permission_name = ?',
+              ['Delete Document'],
+              (err, permissionResult) => {
+                if (err || permissionResult.length === 0) {
                   db.rollback(() => {});
-                  return res.status(500).json({ error: 'Failed to delete policy' });
+                  return res.status(500).json({ error: 'Permission lookup failed' });
                 }
 
-                db.commit(async (err) => {
-                  if (err) {
-                    db.rollback(() => {});
-                    return res.status(500).json({ error: 'Commit failed' });
-                  }
+                const deletePermissionID = permissionResult[0].permission_ID;
 
-                  await safeAuditLog({
-                    actor_ID: deleterStaffID,
-                    actor_name,
-                    action_type: 'DELETE_DOCUMENT',
-                    policy_ID: null,
-                    policy_name,
-                    description: `Policy "${policy_name}" (ID: ${policyID}) deleted by ${deleterStaffID}.`
-                  });
+                // 🔐 Check access_right
+                db.query(
+                  'SELECT COUNT(*) AS count FROM access_right WHERE staff_ID = ? AND policy_ID = ? AND permission_ID = ?',
+                  [deleterStaffID, policyID, deletePermissionID],
+                  async (err, accessResults) => {
+                    if (err) {
+                      db.rollback(() => {});
+                      return res.status(500).json({ error: 'Database error (access_right lookup)' });
+                    }
 
-                  try {
-                    const [deleterRows] = await auditPool.query(
-                      'SELECT staff_email, staff_name FROM User WHERE staff_ID = ?',
-                      [deleterStaffID]
-                    );
+                    const hasAccessRight = accessResults[0].count > 0;
 
-                    const [adminRows] = await auditPool.query(`
-                      SELECT staff_email FROM User U
-                      JOIN Role R ON U.role_ID = R.role_id
-                      WHERE R.role_name = 'Admin'
-                    `);
+                    // 🔒 Final permission check
+                    if (!hasDeletePermission(userRole, userDeptID, policyDeptID) && !hasAccessRight) {
+                      await safeAuditLog({
+                        actor_ID: deleterStaffID,
+                        actor_name,
+                        action_type: 'UNAUTHORIZED_ACCESS',
+                        policy_ID: policyID,
+                        policy_name,
+                        description: `Permission denied. User ${deleterStaffID} attempted to delete policy "${policy_name}".`
+                      });
+                      db.rollback(() => {});
+                      return res.status(403).json({ error: 'Permission denied' });
+                    }
 
-                    const [departmentUsers] = await auditPool.query(
-                      'SELECT staff_email FROM User WHERE department_ID = ?',
-                      [policyDeptID]
-                    );
+                    // ✅ Proceed with deletion
+                    try {
+                      if (fs.existsSync(file_path)) {
+                        fs.unlinkSync(file_path);
+                      }
 
-                    const subject = `Policy Document Deleted: ${policy_name}`;
-                    const message = `
+                      db.query('DELETE FROM Policy WHERE policy_ID = ?', [policyID], async (err) => {
+                        if (err) {
+                          db.rollback(() => {});
+                          return res.status(500).json({ error: 'Failed to delete policy' });
+                        }
+
+                        db.commit(async (err) => {
+                          if (err) {
+                            db.rollback(() => {});
+                            return res.status(500).json({ error: 'Commit failed' });
+                          }
+
+                          await safeAuditLog({
+                            actor_ID: deleterStaffID,
+                            actor_name,
+                            action_type: 'DELETE_DOCUMENT',
+                            policy_ID: null,
+                            policy_name,
+                            description: `Policy "${policy_name}" (ID: ${policyID}) deleted by ${deleterStaffID}.`
+                          });
+
+                          try {
+                            const [deleterRows] = await auditPool.query(
+                              'SELECT staff_email, staff_name FROM User WHERE staff_ID = ?',
+                              [deleterStaffID]
+                            );
+
+                            const [adminRows] = await auditPool.query(`
+                              SELECT staff_email FROM User U
+                              JOIN Role R ON U.role_ID = R.role_id
+                              WHERE R.role_name = 'Admin'
+                            `);
+
+                            const [departmentUsers] = await auditPool.query(
+                              'SELECT staff_email FROM User WHERE department_ID = ?',
+                              [policyDeptID]
+                            );
+
+                            const subject = `Policy Document Deleted: ${policy_name}`;
+                            const message = `
 The policy document titled "${policy_name}" (ID: ${policyID}) has been deleted.
 
 Deleted by: ${deleterRows[0]?.staff_name || 'Unknown User'} (ID: ${deleterStaffID})
 
 If you have any questions, please contact the administrator.
-                    `.trim();
+                            `.trim();
 
-                    const recipients = new Set();
-                    if (deleterRows[0]?.staff_email) recipients.add(deleterRows[0].staff_email);
-                    adminRows.forEach(({ staff_email }) => recipients.add(staff_email));
-                    departmentUsers.forEach(({ staff_email }) => recipients.add(staff_email));
+                            const recipients = new Set();
+                            if (deleterRows[0]?.staff_email) recipients.add(deleterRows[0].staff_email);
+                            adminRows.forEach(({ staff_email }) => recipients.add(staff_email));
+                            departmentUsers.forEach(({ staff_email }) => recipients.add(staff_email));
 
-                    await Promise.allSettled(
-                      [...recipients].map(email =>
-                        sendPolicyUpdateEmail(email, subject, message).catch(err =>
-                          console.error(`Failed to send email to ${email}: ${err.message}`)
-                        )
-                      )
-                    );
+                            await Promise.allSettled(
+                              [...recipients].map(email =>
+                                sendPolicyUpdateEmail(email, subject, message).catch(err =>
+                                  console.error(`Failed to send email to ${email}: ${err.message}`)
+                                )
+                              )
+                            );
 
-                    res.status(200).json({ message: 'Policy deleted and notifications sent' });
-                  } catch (emailErr) {
-                    console.error('Notification error:', emailErr);
-                    res.status(200).json({ message: 'Policy deleted, but failed to notify users' });
+                            res.status(200).json({ message: 'Policy deleted and notifications sent' });
+                          } catch (emailErr) {
+                            console.error('Notification error:', emailErr);
+                            res.status(200).json({ message: 'Policy deleted, but failed to notify users' });
+                          }
+                        });
+                      });
+                    } catch (err) {
+                      db.rollback(() => {});
+                      console.error('Error during deletion process:', err);
+                      res.status(500).json({ error: 'Internal server error' });
+                    }
                   }
-                });
-              });
-            } catch (err) {
-              db.rollback(() => {});
-              console.error('Error during deletion process:', err);
-              res.status(500).json({ error: 'Internal server error' });
-            }
+                );
+              }
+            );
           }
         );
       }

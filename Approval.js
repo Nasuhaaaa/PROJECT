@@ -1,6 +1,5 @@
 const mysql = require('mysql2/promise');
 
-// Define connection config inline
 const dbConfig = {
   host: '127.0.0.1',
   user: 'root',
@@ -15,11 +14,12 @@ async function getPendingRequests() {
   try {
     const [rows] = await connection.execute(`
       SELECT r.request_ID, r.staff_ID, r.policy_ID, r.status, r.action_type, r.request_date AS request_at,
-             u.staff_name, p.policy_name
+             u.staff_name, 
+             COALESCE(p.policy_name, 'Deleted Policy') AS policy_name
       FROM permission_request r
       JOIN user u ON r.staff_ID = u.staff_ID
-      JOIN policy p ON r.policy_ID = p.policy_ID
-      WHERE r.status = 'Pending'
+      LEFT JOIN policy p ON r.policy_ID = p.policy_ID
+      WHERE LOWER(r.status) = 'pending'
       ORDER BY r.request_date DESC
     `);
     return rows;
@@ -31,7 +31,6 @@ async function getPendingRequests() {
 async function updateRequestStatus(request_ID, newStatus) {
   const connection = await mysql.createConnection(dbConfig);
   try {
-    // Get request details (staff_ID, policy_ID, permission_ID)
     const [requestRows] = await connection.execute(`
       SELECT staff_ID, policy_ID, permission_ID 
       FROM permission_request 
@@ -44,16 +43,14 @@ async function updateRequestStatus(request_ID, newStatus) {
 
     const { staff_ID, policy_ID, permission_ID } = requestRows[0];
 
-    // Update the request status
     await connection.execute(`
       UPDATE permission_request
       SET status = ?, decision_at = CURRENT_TIMESTAMP
       WHERE request_ID = ?
     `, [newStatus, request_ID]);
 
-    // If approved, insert into access_right
     if (newStatus === 'Approved') {
-      const valid_from = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const valid_from = new Date().toISOString().slice(0, 10);
 
       await connection.execute(`
         INSERT INTO access_right (policy_ID, permission_ID, staff_ID, valid_from)
@@ -66,6 +63,5 @@ async function updateRequestStatus(request_ID, newStatus) {
     await connection.end();
   }
 }
-
 
 module.exports = { getPendingRequests, updateRequestStatus };

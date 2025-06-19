@@ -5,6 +5,8 @@ const cors = require('cors');
 const app = express();
 const PORT = 3000;
 const mysql = require('mysql2/promise');
+const db = require('./Connection_MySQL'); // or your connection pool file
+
 
 // Import route logic
 const fetchRoles = require('./fetchRoles');
@@ -260,6 +262,27 @@ app.use('/api', displayAudit);
 app.get('/audit-table', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'auditTable.html'));
 });
+
+// --- Add new route for checking upload access for special user ---
+const accessPool = require('./ConnectionPool_MySQL'); // Add this near the top
+
+app.get('/api/has-upload-access', authenticateUser, async (req, res) => {
+  const staffID = req.user.username;
+
+  try {
+    const [rows] = await accessPool.query(
+      `SELECT 1 FROM access_right WHERE staff_ID = ? AND permission_ID = 4`,
+      [staffID]
+    );
+
+    res.json({ hasUploadAccess: rows.length > 0 });
+  } catch (err) {
+    console.error('Error checking upload access:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
