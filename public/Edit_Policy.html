@@ -43,48 +43,61 @@
   </form>
 
   <script>
-  // Set policy_ID from URL on page load
-window.onload = function () {
-    const params = new URLSearchParams(window.location.search);
-    const policy_ID = params.get('id');
-    
-    if (policy_ID) {
-      document.getElementById('policy_ID').value = policy_ID;
-    } else {
-      document.getElementById('response').innerText = '❌ Missing policy ID in URL';
-      document.getElementById('response').style.display = 'block';
-    }
-  };
+    window.onload = function () {
+      const params = new URLSearchParams(window.location.search);
+      const policy_ID = params.get('id');
+      const response = document.getElementById('response');
 
-  document.getElementById('editPolicyForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const formData = new FormData(this);
+      if (policy_ID) {
+        document.getElementById('policy_ID').value = policy_ID;
+      } else {
+        // Fallback to default ID (e.g., 1) for testing
+        document.getElementById('policy_ID').value = 1;
+        response.innerText = 'ℹ️ No policy ID in URL — using default ID: 1';
+        response.style.color = 'orange';
+        response.style.display = 'block';
+      }
 
-    const file = document.getElementById('policyFile').files[0];
-    const declaredFormat = document.getElementById('file_format').value.toLowerCase();
-    const ext = file.name.split('.').pop().toLowerCase();
+      console.log('Set policy_ID to:', document.getElementById('policy_ID').value);
+    };
 
-    if (ext !== declaredFormat) {
-      document.getElementById('response').innerText = 'File format mismatch.';
-      document.getElementById('response').style.display = 'block';
-      return;
-    }
+    document.getElementById('editPolicyForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
 
-    try {
-      const res = await fetch('/policy/update', {
-        method: 'POST',
-        body: formData
-      });
+      const file = document.getElementById('policyFile').files[0];
+      const declaredFormat = document.getElementById('file_format').value.toLowerCase();
+      const ext = file.name.split('.').pop().toLowerCase();
+      const response = document.getElementById('response');
 
-      const data = await res.json();
-      document.getElementById('response').innerText = data.message || 'Upload successful.';
-    } catch (err) {
-      document.getElementById('response').innerText = 'Upload failed.';
-    }
+      if (ext !== declaredFormat) {
+        response.innerText = '❌ File format mismatch.';
+        response.style.color = 'red';
+        response.style.display = 'block';
+        return;
+      }
 
-    document.getElementById('response').style.display = 'block';
-  });
-</script>
+      try {
+        const res = await fetch('/policy/update', {
+          method: 'POST',
+          body: formData
+        });
 
+        const data = await res.json();
+        response.innerText = data.message || '✅ Upload successful.';
+        response.style.color = 'green';
+      } catch (err) {
+        response.innerText = '❌ Upload failed.';
+        response.style.color = 'red';
+      }
+
+      response.style.display = 'block';
+
+      // Optional: Auto-hide response after 5s
+      setTimeout(() => {
+        response.style.display = 'none';
+      }, 5000);
+    });
+  </script>
 </body>
 </html>
