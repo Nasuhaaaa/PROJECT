@@ -1,7 +1,7 @@
 const mysql = require('mysql2/promise');
 const { sendPolicyUpdateEmail } = require('./emailService');
 
-// Database config
+// Define connection config inline
 const dbConfig = {
   host: '127.0.0.1',
   user: 'root',
@@ -16,11 +16,12 @@ async function getPendingRequests() {
   try {
     const [rows] = await connection.execute(`
       SELECT r.request_ID, r.staff_ID, r.policy_ID, r.status, r.action_type, r.request_date AS request_at,
-             u.staff_name, p.policy_name
+             u.staff_name, 
+             COALESCE(p.policy_name, 'Deleted Policy') AS policy_name
       FROM permission_request r
       JOIN user u ON r.staff_ID = u.staff_ID
-      JOIN policy p ON r.policy_ID = p.policy_ID
-      WHERE r.status = 'Pending'
+      LEFT JOIN policy p ON r.policy_ID = p.policy_ID
+      WHERE LOWER(r.status) = 'pending'
       ORDER BY r.request_date DESC
     `);
     return rows;
@@ -33,7 +34,7 @@ async function getPendingRequests() {
 async function updateRequestStatus(request_ID, newStatus) {
   const connection = await mysql.createConnection(dbConfig);
   try {
-    // 1. Get request and user details
+    // Get request details (staff_ID, policy_ID, permission_ID)
     const [requestRows] = await connection.execute(`
       SELECT r.staff_ID, r.policy_ID, r.permission_ID,
              u.staff_name, u.staff_email, u.department_ID,
@@ -53,16 +54,17 @@ async function updateRequestStatus(request_ID, newStatus) {
       staff_name, staff_email, department_ID, policy_name
     } = requestRows[0];
 
-    // 2. Update request status
+    // Update the request status
     await connection.execute(`
       UPDATE permission_request
       SET status = ?, decision_at = CURRENT_TIMESTAMP
       WHERE request_ID = ?
     `, [newStatus, request_ID]);
 
-    // 3. Grant access if approved
+    // If approved, insert into access_right
     if (newStatus === 'Approved') {
-      const valid_from = new Date().toISOString().slice(0, 10);
+      const valid_from = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
       await connection.execute(`
         INSERT INTO access_right (policy_ID, permission_ID, staff_ID, valid_from)
         VALUES (?, ?, ?, ?)
@@ -101,7 +103,5 @@ Policy Management System
   }
 }
 
-module.exports = {
-  getPendingRequests,
-  updateRequestStatus
-};
+
+module.exports = { getPendingRequests, updateRequestStatus };

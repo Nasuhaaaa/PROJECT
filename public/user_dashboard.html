@@ -11,23 +11,45 @@
   <!-- Common features for all users -->
   <div>
     <button onclick="location.href='/SearchPolicy.html'">Search Documents</button>
+    <button onclick="location.href='/request.html'">Request Access to Documents</button>
+  </div>
+
+  <!-- Hidden by default; shown if user has upload permission -->
+  <div id="uploadSection" style="display: none; margin-top: 10px;">
+    <button onclick="location.href='/upload.html'">Upload Document</button>
   </div>
 
   <script>
     // Ensure this page is accessed only by logged-in users
-    if (!localStorage.getItem('token')) {
+    const token = localStorage.getItem('token');
+    if (!token) {
       window.location.href = '/login.html';
     } else {
-      const token = localStorage.getItem('token');
-      const decodedToken = JSON.parse(atob(token.split('.')[1]));  // Decode JWT to get the payload
+      const decodedToken = JSON.parse(atob(token.split('.')[1]));
 
-      if (decodedToken.role_ID === 2) {  // If it's an editor
-        window.location.href = '/editor_dashboard.html';  // Redirect to Editor Dashboard
-      } else if (decodedToken.role_ID !== 3) {  // If not a normal user or admin
-        window.location.href = '/login.html';  // Redirect to login page
+      if (decodedToken.role_ID === 2) {
+        window.location.href = '/editor_dashboard.html';
+      } else if (decodedToken.role_ID !== 3) {
+        window.location.href = '/login.html';
+      } else {
+        // ✅ User is role_ID 3, check if they have upload access
+        fetch('/api/has-upload-access', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.hasUploadAccess) {
+            document.getElementById('uploadSection').style.display = 'block';
+          }
+        })
+        .catch(err => console.error('Access check failed', err));
       }
     }
   </script>
+
   <script src="/logout.js"></script>
 </body>
 </html>
