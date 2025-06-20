@@ -204,3 +204,13 @@ CREATE TABLE edited_policy (
   CONSTRAINT fk_policy_ID FOREIGN KEY (policy_ID) REFERENCES Policy(policy_ID) ON DELETE CASCADE
 );
 
+
+
+------------------------------------------request table
+ALTER TABLE permission_request ADD COLUMN action_type ENUM('view', 'upload', 'delete', 'edit') NOT NULL AFTER staff_ID;
+
+ALTER TABLE permission_request ADD COLUMN request_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE permission_request
+ADD COLUMN decision_at DATETIME DEFAULT NULL;
+
