@@ -190,3 +190,27 @@ REFERENCES policy(policy_ID)
 ON DELETE CASCADE;
 
 
+
+
+CREATE TABLE edited_policy (
+  id INT(11) NOT NULL AUTO_INCREMENT,
+  policy_ID INT(11) NOT NULL,
+  modified_by VARCHAR(255) NOT NULL,
+  file_path VARCHAR(255) NOT NULL,
+  file_format VARCHAR(10) NOT NULL,
+  edited_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  INDEX (policy_ID),
+  CONSTRAINT fk_policy_ID FOREIGN KEY (policy_ID) REFERENCES Policy(policy_ID) ON DELETE CASCADE
+);
+
+
+
+------------------------------------------request table
+ALTER TABLE permission_request ADD COLUMN action_type ENUM('view', 'upload', 'delete', 'edit') NOT NULL AFTER staff_ID;
+
+ALTER TABLE permission_request ADD COLUMN request_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE permission_request
+ADD COLUMN decision_at DATETIME DEFAULT NULL;
+
