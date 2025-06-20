@@ -161,7 +161,7 @@ async function submitRequest(data) {
 
     const auditActionType = actionMap[actionLower] || 'VIEW_DOCUMENT';
 
-    const auditDescription = `Permission request submitted for "${actionLower}" on policy ID ${policy_ID || 'N/A'} by ${staff_ID}.`;
+    const auditDescription = `Permission request submitted for "${actionLower}" on policy ID ${policy_ID || 'N/A'}.`;
 
     // Insert audit trail
     await connection.execute(
