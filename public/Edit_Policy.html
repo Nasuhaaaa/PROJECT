@@ -36,7 +36,7 @@
     </select>
 
     <label for="policyFile">Upload Edited File:</label>
-    <input type="file" id="policyFile" name="policyFile" required />
+    <input type="file" id="policyFile" name="policyFile" required accept=".pdf,.docx" />
 
     <button type="submit">Submit</button>
     <p id="response" style="display:none;"></p>
@@ -45,20 +45,19 @@
   <script>
     window.onload = function () {
       const params = new URLSearchParams(window.location.search);
-      const policy_ID = params.get('id');
+      const policy_ID = params.get('policyID');
       const response = document.getElementById('response');
+      const form = document.getElementById('editPolicyForm');
 
       if (policy_ID) {
         document.getElementById('policy_ID').value = policy_ID;
+        console.log('Set policy_ID to:', policy_ID);
       } else {
-        // Fallback to default ID (e.g., 1) for testing
-        document.getElementById('policy_ID').value = 1;
-        response.innerText = 'ℹ️ No policy ID in URL — using default ID: 1';
-        response.style.color = 'orange';
+        form.style.display = 'none';
+        response.innerText = '❌ Missing policy ID. Please access this page with ?id=123 in the URL.';
+        response.style.color = 'red';
         response.style.display = 'block';
       }
-
-      console.log('Set policy_ID to:', document.getElementById('policy_ID').value);
     };
 
     document.getElementById('editPolicyForm').addEventListener('submit', async function(e) {
@@ -70,8 +69,15 @@
       const ext = file.name.split('.').pop().toLowerCase();
       const response = document.getElementById('response');
 
+      if (!file) {
+        response.innerText = '❌ No file selected.';
+        response.style.color = 'red';
+        response.style.display = 'block';
+        return;
+      }
+
       if (ext !== declaredFormat) {
-        response.innerText = '❌ File format mismatch.';
+        response.innerText = '❌ File format mismatch. Please upload a .' + declaredFormat + ' file.';
         response.style.color = 'red';
         response.style.display = 'block';
         return;
@@ -84,7 +90,7 @@
         });
 
         const data = await res.json();
-        response.innerText = data.message || '✅ Upload successful.';
+        response.innerText = `✅ ${data.message || 'Upload successful.'}`;
         response.style.color = 'green';
       } catch (err) {
         response.innerText = '❌ Upload failed.';

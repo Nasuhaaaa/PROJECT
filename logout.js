@@ -11,7 +11,7 @@ router.post('/', authenticateUser, async (req, res) => {
     await logAuditAction({
       actor_ID: staff_ID,
       action_type: 'LOGOUT',
-      description: `User with staff_ID ${staff_ID} logged out.`
+      description: `User successfully logged out`
     });
 
     return res.status(200).json({ message: 'Logout successful and audited.' });

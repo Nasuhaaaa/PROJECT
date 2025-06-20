@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const connectToDatabase = require('./Connection_MySQL');
 const { sendPolicyUpdateEmail } = require('./emailService');
+const logAuditAction = require('./logAuditAction');
 
 const router = express.Router();
 const db = connectToDatabase();
@@ -56,6 +57,7 @@ router.post('/policy/update', upload.single('policyFile'), async (req, res) => {
   }
 
   if (fileExt !== declaredFormat) {
+    fs.unlink(file.path, () => {}); // Delete file if mismatch
     return res.status(400).json({
       error: `File extension (${fileExt}) does not match declared format (${declaredFormat})`
     });
@@ -73,9 +75,21 @@ router.post('/policy/update', upload.single('policyFile'), async (req, res) => {
       return res.status(400).json({ error: `Policy with ID ${policy_ID} does not exist` });
     }
 
+    // Insert into edited_policy
     await db.promise().query(
       'INSERT INTO edited_policy (policy_ID, modified_by, file_path, file_format, edited_at) VALUES (?, ?, ?, ?, NOW())',
       [policy_ID, modified_by, cleanPath, declaredFormat]
+    );
+
+    // --- NEW: Update main Policy table ---
+    await db.promise().query(
+      `UPDATE Policy 
+       SET file_path = ?, 
+           file_format = ?, 
+           last_updated = NOW(), 
+           modified_by = ?
+       WHERE policy_ID = ?`,
+      [cleanPath, declaredFormat, modified_by, policy_ID]
     );
 
     // Email Notification Section
@@ -90,7 +104,7 @@ router.post('/policy/update', upload.single('policyFile'), async (req, res) => {
       const department_ID = editor?.department_ID;
 
       const [adminRows] = await db.promise().query(
-        'SELECT staff_email FROM user WHERE role_ID = "Admin"'
+        'SELECT staff_email FROM user WHERE LOWER(role_ID) = "admin"'
       );
       const adminEmails = adminRows.map(row => row.staff_email).filter(Boolean);
 
@@ -168,6 +182,20 @@ Policy Management System
 
     } catch (emailErr) {
       console.error('Email notification failed:', emailErr.message);
+    }
+
+    // --- AUDIT TRAIL LOGGING ---
+    try {
+      await logAuditAction({
+        actor_ID: modified_by,
+        action_type: 'EDIT_DOCUMENT',
+        policy_ID,
+        policy_name: existingPolicy[0].policy_name,
+        description: `Policy "${existingPolicy[0].policy_name}" (ID: ${policy_ID}) was edited and uploaded as "${file.filename}" by staff_ID ${modified_by}.`
+      });
+      console.log('Audit log recorded.');
+    } catch (auditErr) {
+      console.error('Audit logging failed:', auditErr.message);
     }
 
     return res.status(200).json({
