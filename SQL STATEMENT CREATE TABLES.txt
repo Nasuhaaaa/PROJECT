@@ -190,3 +190,17 @@ REFERENCES policy(policy_ID)
 ON DELETE CASCADE;
 
 
+
+
+CREATE TABLE edited_policy (
+  id INT(11) NOT NULL AUTO_INCREMENT,
+  policy_ID INT(11) NOT NULL,
+  modified_by VARCHAR(255) NOT NULL,
+  file_path VARCHAR(255) NOT NULL,
+  file_format VARCHAR(10) NOT NULL,
+  edited_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  INDEX (policy_ID),
+  CONSTRAINT fk_policy_ID FOREIGN KEY (policy_ID) REFERENCES Policy(policy_ID) ON DELETE CASCADE
+);
+
