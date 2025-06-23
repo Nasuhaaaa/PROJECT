@@ -37,6 +37,8 @@
       z-index: 1;
       position: relative;
       overflow-x: auto;
+      max-height: 90vh;
+      overflow-y: auto;
     }
 
     h2 {
@@ -49,6 +51,7 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 0.95rem;
+      margin-bottom: 2rem;
     }
 
     th, td {
@@ -97,7 +100,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>Pending Policy Requests</h2>
+    <h2>Pending Permission Requests</h2>
     <table id="requestsTable">
       <thead>
         <tr>
@@ -113,16 +116,24 @@
       </thead>
       <tbody></tbody>
     </table>
+
+    <h2>Pending Edited Policy Approvals</h2>
+    <table id="editedTable">
+      <thead>
+        <tr>
+          <th>Edit ID</th>
+          <th>Policy ID</th>
+          <th>Policy Name</th>
+          <th>Modified By</th>
+          <th>Upload Time</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
   <script>
-    const permissionMap = {
-      1: 'View',
-      2: 'Upload',
-      3: 'Delete',
-      4: 'Edit'
-    };
-
     async function fetchPendingRequests() {
       try {
         const response = await fetch('http://localhost:3000/api/requests/pending');
@@ -172,7 +183,78 @@
       }
     }
 
-    window.onload = fetchPendingRequests;
+    async function fetchEditedPolicies() {
+      try {
+        const response = await fetch('http://localhost:3000/api/edited-policies/pending');
+        if (!response.ok) throw new Error(`Server error: ${response.status}`);
+
+        const edits = await response.json();
+        const tbody = document.querySelector('#editedTable tbody');
+        tbody.innerHTML = '';
+
+        edits.forEach(edit => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${edit.id}</td>
+            <td>${edit.policy_ID}</td>
+            <td>${edit.policy_name}</td>
+            <td>${edit.staff_name}</td>
+            <td>${new Date(edit.uploaded_at).toLocaleString()}</td>
+            <td>
+              <button onclick="approveEditedPolicy(${edit.id})">Approve</button>
+              <button onclick="rejectEditedPolicy(${edit.id})">Reject</button>
+
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Error fetching edited policies:', error);
+        alert('Failed to load edited policies.');
+      }
+    }
+
+    async function approveEditedPolicy(editID) {
+      try {
+        const approver_ID = 9999; // Replace with actual admin ID if using auth
+        const response = await fetch(`http://localhost:3000/api/policy/approve-edit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ edit_id: editID, approver_ID })
+        });
+
+        const result = await response.json();
+        alert(result.message || 'Edited policy approved.');
+        fetchEditedPolicies();
+      } catch (error) {
+        console.error('Approval failed:', error);
+        alert('Failed to approve edited policy.');
+      }
+    }
+
+    async function rejectEditedPolicy(editID) {
+      try {
+        const approver_ID = 9999; // Replace with actual admin ID if needed
+        const response = await fetch(`http://localhost:3000/api/policy/reject-edit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ edit_id: editID, approver_ID })
+        });
+
+        const result = await response.json();
+        alert(result.message || 'Edited policy rejected.');
+        fetchEditedPolicies(); // Refresh the table
+      } catch (error) {
+        console.error('Rejection failed:', error);
+        alert('Failed to reject edited policy.');
+      }
+    }
+
+
+    window.onload = () => {
+      fetchPendingRequests();
+      fetchEditedPolicies();
+    };
   </script>
 </body>
 </html>

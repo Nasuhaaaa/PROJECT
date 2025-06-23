@@ -214,3 +214,11 @@ ALTER TABLE permission_request ADD COLUMN request_at TIMESTAMP DEFAULT CURRENT_T
 ALTER TABLE permission_request
 ADD COLUMN decision_at DATETIME DEFAULT NULL;
 
+
+_____________________________________________ edit policy table
+ALTER TABLE edited_policy
+ADD COLUMN status ENUM('Pending','Approved','Rejected') DEFAULT 'Pending',
+ADD COLUMN reviewed_at DATETIME,
+ADD COLUMN comments TEXT;
+
+
