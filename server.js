@@ -30,6 +30,8 @@ const { submitRequest } = require('./request.js');
 const { getPendingRequests, updateRequestStatus } = require('./Approval');
 const displayAudit = require('./displayAudit');
 const policyRoutes = require('./EditedPolicy');
+const { getPendingEditedPolicies, approveEditedPolicy, rejectEditedPolicy } = require('./Approval'); // ⬅️ Add this to top with other imports
+
 
 // Middleware
 app.use(cors());
@@ -288,7 +290,51 @@ app.get('/api/has-upload-access', authenticateUser, async (req, res) => {
   }
 });
 
-// Start the server
+
+// Get pending edited policies
+app.get('/api/edited-policies/pending', async (req, res) => {
+  try {
+    const rows = await getPendingEditedPolicies();
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching edited policies:', err);
+    res.status(500).json({ error: 'Failed to load pending edits' });
+  }
+});
+
+// Approve edited policy
+app.post('/api/policy/approve-edit', async (req, res) => {
+  const { edit_id, approver_ID } = req.body;
+  if (!edit_id || !approver_ID) {
+    return res.status(400).json({ error: 'Missing edit_id or approver_ID' });
+  }
+
+  try {
+    const result = await approveEditedPolicy(edit_id, approver_ID);
+    res.status(200).json({ message: 'Policy updated successfully', result });
+  } catch (err) {
+    console.error('Error approving edited policy:', err);
+    res.status(500).json({ error: 'Error during policy approval' });
+  }
+});
+
+// Reject edited policy
+app.post('/api/policy/reject-edit', async (req, res) => {
+  const { edit_id, approver_ID } = req.body;
+  if (!edit_id || !approver_ID) {
+    return res.status(400).json({ error: 'Missing edit_id or approver_ID' });
+  }
+
+  try {
+    const result = await rejectEditedPolicy(edit_id, approver_ID);
+    res.status(200).json({ message: 'Policy edit rejected successfully', result });
+  } catch (err) {
+    console.error('Error rejecting edited policy:', err);
+    res.status(500).json({ error: 'Error during policy rejection' });
+  }
+});
+
+
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });

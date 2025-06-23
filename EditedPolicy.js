@@ -82,7 +82,7 @@ router.post('/policy/update', upload.single('policyFile'), async (req, res) => {
     );
 
     // --- NEW: Update main Policy table ---
-    await db.promise().query(
+    /*await db.promise().query(
       `UPDATE Policy 
        SET file_path = ?, 
            file_format = ?, 
@@ -90,7 +90,7 @@ router.post('/policy/update', upload.single('policyFile'), async (req, res) => {
            modified_by = ?
        WHERE policy_ID = ?`,
       [cleanPath, declaredFormat, modified_by, policy_ID]
-    );
+    );*/
 
     // Email Notification Section
     try {
