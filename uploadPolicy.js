@@ -92,7 +92,7 @@ router.post('/upload', authenticateUser, upload.single('policyFile'), (req, res)
           action_type: 'UPLOAD_DOCUMENT',
           policy_ID,
           policy_name,
-          description: `Policy "${policy_name}" uploaded by staff_ID ${published_by}.`
+          description: `Policy "${policy_name}" uploaded`
         });
       } catch (auditErr) {
         console.error('Audit logging failed:', auditErr.message);

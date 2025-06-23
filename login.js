@@ -35,7 +35,7 @@ router.post('/login', (req, res) => {
 });
 
 
-        // ✅ Successful login audit log
+        // Successful login audit log
         await logAuditAction({
           actor_ID: user.staff_ID,
           action_type: 'LOGIN',
@@ -44,7 +44,7 @@ router.post('/login', (req, res) => {
 
         return res.json({ token });
       } else {
-        // ❌ Failed login with valid user ID
+        // Failed login with valid user ID
         await logAuditAction({
           actor_ID: user.staff_ID,
           action_type: 'FAILED_LOGIN',
@@ -54,7 +54,7 @@ router.post('/login', (req, res) => {
         return res.status(401).send('Incorrect Password');
       }
     } else {
-      // ❌ Failed login for non-existent user
+      // Failed login for non-existent user
       await logAuditAction({
         actor_ID: null,
         action_type: 'FAILED_LOGIN',

@@ -1,5 +1,6 @@
 const mysql = require('mysql2/promise');
 const { sendPolicyUpdateEmail } = require('./emailService');
+const logAuditAction = require('./logAuditAction'); 
 
 // Define connection config inline
 const dbConfig = {
@@ -31,19 +32,19 @@ async function getPendingRequests() {
 }
 
 // Update request status and notify via email
-async function updateRequestStatus(request_ID, newStatus) {
+async function updateRequestStatus(request_ID, newStatus, actor_ID) {
   const connection = await mysql.createConnection(dbConfig);
   try {
-    // Get request details (staff_ID, policy_ID, permission_ID)
-   const [requestRows] = await connection.execute(`
-    SELECT r.staff_ID, r.policy_ID, r.permission_ID,
-          u.staff_name, u.staff_email, u.department_ID,
-          COALESCE(p.policy_name, 'Deleted Policy') AS policy_name
-    FROM permission_request r
-    JOIN user u ON r.staff_ID = u.staff_ID
-    LEFT JOIN policy p ON r.policy_ID = p.policy_ID
-    WHERE r.request_ID = ?
-  `, [request_ID]);
+    // Get request details
+    const [requestRows] = await connection.execute(`
+      SELECT r.staff_ID, r.policy_ID, r.permission_ID,
+            u.staff_name, u.staff_email, u.department_ID,
+            COALESCE(p.policy_name, 'Deleted Policy') AS policy_name
+      FROM permission_request r
+      JOIN user u ON r.staff_ID = u.staff_ID
+      LEFT JOIN policy p ON r.policy_ID = p.policy_ID
+      WHERE r.request_ID = ?
+    `, [request_ID]);
 
     if (requestRows.length === 0) {
       throw new Error('Request not found');
@@ -64,14 +65,13 @@ async function updateRequestStatus(request_ID, newStatus) {
     // If approved, insert into access_right
     if (newStatus === 'Approved') {
       const valid_from = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-
       await connection.execute(`
         INSERT INTO access_right (policy_ID, permission_ID, staff_ID, valid_from)
         VALUES (?, ?, ?, ?)
       `, [policy_ID, permission_ID, staff_ID, valid_from]);
     }
 
-    // 4. Get admin and department member emails (excluding requester)
+    // Email notification setup
     const [admins] = await connection.execute(`
       SELECT staff_email FROM user WHERE role_ID = 'admin'
     `);
@@ -83,7 +83,6 @@ async function updateRequestStatus(request_ID, newStatus) {
     const to = staff_email;
     const cc = [...admins, ...departmentUsers].map(user => user.staff_email);
 
-    // 5. Compose and send email
     const subject = `Policy Access Request ${newStatus}`;
     const actionType = newStatus === 'Approved' ? 'approved' : 'rejected';
     const message = `
@@ -96,6 +95,25 @@ Policy Management System
     `.trim();
 
     await sendPolicyUpdateEmail(to, subject, message);
+
+const statusMap = {
+  Approved: 'APPROVED',
+  Rejected: 'REJECTED',
+  Denied: 'REJECTED' // 
+};
+
+const actionTypeValue = statusMap[newStatus] || newStatus.toUpperCase();
+
+
+    // Log audit trail
+    await logAuditAction({
+      actor_ID,
+      // action_type: `PERMISSION_${newStatus.toUpperCase()}`,
+      action_type: `PERMISSION_${actionTypeValue}`,
+      policy_ID,
+      policy_name,
+      description: `Request for "${policy_name}" was ${newStatus.toLowerCase()}`
+    });
 
     return { message: `Request ${newStatus.toLowerCase()} successfully.` };
   } finally {
