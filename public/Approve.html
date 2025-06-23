@@ -215,8 +215,19 @@
     }
 
     async function approveEditedPolicy(editID) {
+      const approver_ID = getStaffIdFromToken();
+
+      if (!editID) {
+        alert("Missing edit ID");
+        return;
+      }
+
+      if (!approver_ID) {
+        alert("Missing approver ID");
+        return;
+      }
+
       try {
-        const approver_ID = 9999; // Replace with actual admin ID if using auth
         const response = await fetch(`http://localhost:3000/api/policy/approve-edit`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -224,29 +235,65 @@
         });
 
         const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Approval failed');
+        }
+
         alert(result.message || 'Edited policy approved.');
         fetchEditedPolicies();
       } catch (error) {
         console.error('Approval failed:', error);
-        alert('Failed to approve edited policy.');
+        alert(error.message);
       }
     }
 
-    async function rejectEditedPolicy(editID) {
+    async function rejectEditedPolicy(editId) {
+      const approver_ID = getStaffIdFromToken(); // or sessionStorage
+
+      if (!editId) {
+        alert("Missing edit ID");
+        return;
+      }
+
+      if (!approver_ID) {
+        alert("Missing approver ID");
+        return;
+      }
+
       try {
-        const approver_ID = 9999; // Replace with actual admin ID if needed
-        const response = await fetch(`http://localhost:3000/api/policy/reject-edit`, {
+        const res = await fetch('/api/policy/reject-edit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ edit_id: editID, approver_ID })
+          body: JSON.stringify({
+            edit_id: editId,
+            approver_ID: approver_ID
+          })
         });
 
-        const result = await response.json();
-        alert(result.message || 'Edited policy rejected.');
-        fetchEditedPolicies(); // Refresh the table
-      } catch (error) {
-        console.error('Rejection failed:', error);
-        alert('Failed to reject edited policy.');
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Rejection failed');
+        }
+
+        alert(data.message);
+        // Optionally refresh the list
+      } catch (err) {
+        console.error('Error rejecting edited policy:', err);
+        alert(err.message);
+      }
+    }
+
+    function getStaffIdFromToken() {
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.staff_ID;  // Assuming your token contains staff_ID
+      } catch (err) {
+        console.error('Invalid token:', err);
+        return null;
       }
     }
 

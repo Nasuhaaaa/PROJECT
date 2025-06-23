@@ -35,7 +35,6 @@ async function getPendingRequests() {
 async function updateRequestStatus(request_ID, newStatus, actor_ID) {
   const connection = await mysql.createConnection(dbConfig);
   try {
-    // Get request details
     const [requestRows] = await connection.execute(`
       SELECT r.staff_ID, r.policy_ID, r.permission_ID,
             u.staff_name, u.staff_email, u.department_ID,
@@ -55,25 +54,22 @@ async function updateRequestStatus(request_ID, newStatus, actor_ID) {
       staff_name, staff_email, department_ID, policy_name
     } = requestRows[0];
 
-    // Update the request status
     await connection.execute(`
       UPDATE permission_request
       SET status = ?, decision_at = CURRENT_TIMESTAMP
       WHERE request_ID = ?
     `, [newStatus, request_ID]);
 
-    // If approved, insert into access_right
     if (newStatus === 'Approved') {
-      const valid_from = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const valid_from = new Date().toISOString().slice(0, 10);
       await connection.execute(`
         INSERT INTO access_right (policy_ID, permission_ID, staff_ID, valid_from)
         VALUES (?, ?, ?, ?)
       `, [policy_ID, permission_ID, staff_ID, valid_from]);
     }
 
-    // Email notification setup
     const [admins] = await connection.execute(`
-      SELECT staff_email FROM user WHERE role_ID = 'admin'
+      SELECT staff_email FROM user WHERE role_ID = 1
     `);
 
     const [departmentUsers] = await connection.execute(`
@@ -96,19 +92,16 @@ Policy Management System
 
     await sendPolicyUpdateEmail(to, subject, message);
 
-const statusMap = {
-  Approved: 'APPROVED',
-  Rejected: 'REJECTED',
-  Denied: 'REJECTED' // 
-};
+    const statusMap = {
+      Approved: 'APPROVED',
+      Rejected: 'REJECTED',
+      Denied: 'REJECTED'
+    };
 
-const actionTypeValue = statusMap[newStatus] || newStatus.toUpperCase();
+    const actionTypeValue = statusMap[newStatus] || newStatus.toUpperCase();
 
-
-    // Log audit trail
     await logAuditAction({
       actor_ID,
-      // action_type: `PERMISSION_${newStatus.toUpperCase()}`,
       action_type: `PERMISSION_${actionTypeValue}`,
       policy_ID,
       policy_name,
@@ -131,6 +124,7 @@ async function getPendingEditedPolicies() {
       FROM edited_policy ep
       JOIN user u ON ep.modified_by = u.staff_ID
       JOIN policy p ON ep.policy_ID = p.policy_ID
+      WHERE ep.status = 'Pending'
       ORDER BY ep.edited_at DESC
     `);
     return rows;
@@ -139,12 +133,10 @@ async function getPendingEditedPolicies() {
   }
 }
 
-
 // Approve an edited policy and replace the original file in the Policy table
-async function approveEditedPolicy(edit_id, approver_ID) {
+async function approveEditedPolicy(edit_id, actor_ID) {
   const connection = await mysql.createConnection(dbConfig);
   try {
-    // Fetch the edited policy row
     const [editRows] = await connection.execute(`
       SELECT ep.*, u.staff_name, u.staff_email, p.policy_name
       FROM edited_policy ep
@@ -159,27 +151,24 @@ async function approveEditedPolicy(edit_id, approver_ID) {
 
     const edit = editRows[0];
 
-    // Step 1: Update the original policy
     await connection.execute(`
       UPDATE policy
       SET file_path = ?, file_format = ?, modified_by = ?, last_updated = NOW()
       WHERE policy_ID = ?
     `, [edit.file_path, edit.file_format, edit.modified_by, edit.policy_ID]);
 
-    // Step 2: Delete the row from edited_policy (or mark as approved if you prefer)
-    await connection.execute('DELETE FROM edited_policy WHERE id = ?', [edit_id]);
-
-    // Step 3: Log to audit (optional)
     await connection.execute(`
-      INSERT INTO audit (actor_ID, action_type, policy_ID, description, timestamp)
-      VALUES (?, 'Approved, ?, ?, NOW())
-    `, [
-      approver_ID,
-      edit.policy_ID,
-      `Admin approved edit (ID: ${edit_id}) for policy "${edit.policy_name}" uploaded by ${edit.staff_name}.`
-    ]);
+      DELETE FROM edited_policy WHERE id = ?
+    `, [edit_id]);
 
-    // Step 4: Send email notification to original editor
+    await logAuditAction({
+      actor_ID,
+      action_type: 'APPROVED_EDIT',
+      policy_ID: edit.policy_ID,
+      policy_name: edit.policy_name,
+      description: `Edit (ID: ${edit_id}) for policy "${edit.policy_name}" uploaded by ${edit.staff_name} was approved.`
+    });
+
     const subject = `Your Edited Policy Has Been Approved`;
     const message = `
 Hi ${edit.staff_name},
@@ -195,17 +184,15 @@ Policy Management System
     await sendPolicyUpdateEmail(edit.staff_email, subject, message);
 
     return { message: 'Edited policy approved and applied to main policy.' };
-
   } finally {
     await connection.end();
   }
 }
 
 // Reject an edited policy without applying it
-async function rejectEditedPolicy(edit_id, approver_ID) {
+async function rejectEditedPolicy(edit_id, actor_ID) {
   const connection = await mysql.createConnection(dbConfig);
   try {
-    // Fetch edited policy info for audit and email
     const [editRows] = await connection.execute(`
       SELECT ep.*, u.staff_name, u.staff_email, p.policy_name
       FROM edited_policy ep
@@ -220,25 +207,21 @@ async function rejectEditedPolicy(edit_id, approver_ID) {
 
     const edit = editRows[0];
 
-    // Step 1: Delete the pending edited policy
     await connection.execute(`
       UPDATE edited_policy
       SET status = 'Rejected'
       WHERE id = ?
     `, [edit_id]);
 
+    await logAuditAction({
+      actor_ID,
+      action_type: 'REJECTED_EDIT',
+      policy_ID: edit.policy_ID,
+      policy_name: edit.policy_name,
+      description: `Edit (ID: ${edit_id}) for policy "${edit.policy_name}" uploaded by ${edit.staff_name} was rejected.`
+    });
 
-    // Step 2: Log the rejection in audit trail
-    await connection.execute(`
-      INSERT INTO audit (actor_ID, action_type, policy_ID, description, timestamp)
-      VALUES (?, 'Rejected', ?, ?, NOW())
-    `, [
-      approver_ID,
-      edit.policy_ID,
-      `Admin rejected edit (ID: ${edit_id}) for policy "${edit.policy_name}" uploaded by ${edit.staff_name}.`
-    ]);
 
-    // Step 3: Send rejection email
     const subject = `Your Edited Policy Was Rejected`;
     const message = `
 Hi ${edit.staff_name},
@@ -261,7 +244,6 @@ Policy Management System
 
 
 
-// Approval.js
 module.exports = {
   getPendingRequests,
   updateRequestStatus,
