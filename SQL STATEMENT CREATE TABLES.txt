@@ -223,3 +223,16 @@ ADD COLUMN reviewed_at DATETIME,
 ADD COLUMN comments TEXT;
 
 
+
+
+----------------------------------------------------------------edit audit table
+ALTER TABLE audit 
+MODIFY action_type ENUM(
+  'LOGIN','LOGOUT','FAILED_LOGIN',
+  'ADD_USER','EDIT_USER','DELETE_USER',
+  'UPLOAD_DOCUMENT','EDIT_DOCUMENT','DELETE_DOCUMENT',
+  'VIEW_DOCUMENT','DOWNLOAD_DOCUMENT',
+  'PERMISSION_APPROVED','PERMISSION_REJECTED',
+  'APPROVED_EDIT','REJECTED_EDIT'
+);
+
