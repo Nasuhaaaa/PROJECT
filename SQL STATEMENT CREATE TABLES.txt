@@ -213,6 +213,7 @@ ALTER TABLE permission_request ADD COLUMN request_at TIMESTAMP DEFAULT CURRENT_T
 
 ALTER TABLE permission_request
 ADD COLUMN decision_at DATETIME DEFAULT NULL;
+_____________________________________________________________________________________________
 
 
 _____________________________________________ edit policy table
@@ -221,4 +222,17 @@ ADD COLUMN status ENUM('Pending','Approved','Rejected') DEFAULT 'Pending',
 ADD COLUMN reviewed_at DATETIME,
 ADD COLUMN comments TEXT;
 
+
+
+
+----------------------------------------------------------------edit audit table
+ALTER TABLE audit 
+MODIFY action_type ENUM(
+  'LOGIN','LOGOUT','FAILED_LOGIN',
+  'ADD_USER','EDIT_USER','DELETE_USER',
+  'UPLOAD_DOCUMENT','EDIT_DOCUMENT','DELETE_DOCUMENT',
+  'VIEW_DOCUMENT','DOWNLOAD_DOCUMENT',
+  'PERMISSION_APPROVED','PERMISSION_REJECTED',
+  'APPROVED_EDIT','REJECTED_EDIT'
+);
 

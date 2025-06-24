@@ -105,7 +105,7 @@ Policy Management System
       action_type: `PERMISSION_${actionTypeValue}`,
       policy_ID,
       policy_name,
-      description: `Request for "${policy_name}" was ${newStatus.toLowerCase()}`
+      description: `Request for "${policy_name}" by user ${staff_ID} has been ${newStatus.toLowerCase()}.`
     });
 
     return { message: `Request ${newStatus.toLowerCase()} successfully.` };

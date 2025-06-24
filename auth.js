@@ -9,7 +9,7 @@ function generateToken(user) {
     username: user.username, 
     role_ID: user.role_ID,
     staff_ID: user.staff_ID,
-    department_ID: user.department_ID  // ✅ Include department_ID
+    department_ID: user.department_ID 
   }, JWT_SECRET, { expiresIn: '1h' });
 }
 

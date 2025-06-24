@@ -2,13 +2,19 @@ const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const mysql = require('mysql2/promise');
+// const session = require('express-session'); // Optional if using sessions
 const app = express();
 const PORT = 3000;
-const mysql = require('mysql2/promise');
-const db = require('./Connection_MySQL'); // or your connection pool file
 
+// JWT Auth middleware
+const { authenticateUser } = require('./auth');
 
-// Import route logic
+// Database connections
+const db = require('./Connection_MySQL');
+const accessPool = require('./ConnectionPool_MySQL');
+
+// Route imports
 const fetchRoles = require('./fetchRoles');
 const fetchDepartments = require('./fetchDepartments');
 const addUser = require('./addUser');
@@ -21,7 +27,6 @@ const deletePolicyRoute = require('./deletePolicy');
 const editUser = require('./editUser');
 const { deleteUser } = require('./deleteUser');
 const { submitRequest } = require('./request.js');
-const { authenticateUser } = require('./auth');
 const { getPendingRequests, updateRequestStatus } = require('./Approval');
 const displayAudit = require('./displayAudit');
 const policyRoutes = require('./EditedPolicy');
@@ -33,23 +38,21 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static('public')); // serve approve.html from public folder
+app.use(express.static('public'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/edited_uploads', express.static(path.join(__dirname, 'edited_uploads')));
 
-// Upload & delete routes
+// Routes for policy upload/delete
 app.use('/policy', uploadPolicyRoute);
 app.use('/delete-policy', deletePolicyRoute);
-app.use('/', policyRoutes); // EditedPolicy.js
+app.use('/', policyRoutes);
 
-// Serve static files
+// Static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Routes
+// Authentication routes
 app.use('/', loginRoutes);
-//app.use('/', policyRoutes);
-app.use('/logout', logoutRoute); // ✅ Register logout endpoint
-
+app.use('/logout', logoutRoute);
 
 // Roles
 app.get('/getRoles', (req, res) => {
@@ -68,7 +71,7 @@ app.get('/getDepartments', async (req, res) => {
   }
 });
 
-// Policy IDs by Department
+// Policy IDs by department
 app.get('/getPolicyIDs', async (req, res) => {
   const department_ID = req.query.department_ID;
   if (!department_ID) {
@@ -180,7 +183,7 @@ app.get('/searchUser', async (req, res) => {
   }
 });
 
-// Forgot Password
+// Forgot password
 app.get('/forgot-password', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'forgotpassword.html'));
 });
@@ -214,7 +217,6 @@ app.post('/reset-password', async (req, res) => {
   }
 });
 
-//-----------SEARCH POLICY-----------------------------
 // Search policy
 app.get('/policy/search', async (req, res) => {
   const query = req.query.q;
@@ -227,7 +229,7 @@ app.get('/policy/search', async (req, res) => {
   }
 });
 
-// Pending requests
+// Get pending requests
 app.get('/api/requests/pending', async (req, res) => {
   try {
     const rows = await getPendingRequests();
@@ -238,18 +240,24 @@ app.get('/api/requests/pending', async (req, res) => {
   }
 });
 
-// Approve/Deny request
-app.put('/api/requests/:id', async (req, res) => {
+// ✅ Approve/Deny request — protected with JWT
+app.put('/api/requests/:id', authenticateUser, async (req, res) => {
   const request_ID = req.params.id;
   const { status } = req.body;
-  console.log('Updating request', request_ID, 'to status', status);
+  const actor_ID = req.user?.staff_ID;
+
+  console.log('Updating request', request_ID, 'to status', status, 'by actor', actor_ID);
 
   if (!['APPROVED', 'DENIED'].includes(status?.toUpperCase())) {
     return res.status(400).json({ error: 'Invalid status. Use Approved or Denied.' });
   }
 
+  if (!actor_ID) {
+    return res.status(401).json({ error: 'Unauthorized: Missing actor ID' });
+  }
+
   try {
-    const result = await updateRequestStatus(request_ID, status);
+    const result = await updateRequestStatus(request_ID, status, actor_ID);
     res.json(result);
   } catch (err) {
     console.error('Error updating request status:', err);
@@ -257,17 +265,15 @@ app.put('/api/requests/:id', async (req, res) => {
   }
 });
 
-// Use audit route for API
+// Audit route
 app.use('/api', displayAudit);
 
-// Route to open the audit HTML page
+// Audit page
 app.get('/audit-table', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'auditTable.html'));
 });
 
-// --- Add new route for checking upload access for special user ---
-const accessPool = require('./ConnectionPool_MySQL'); // Add this near the top
-
+// Check if current user has upload access
 app.get('/api/has-upload-access', authenticateUser, async (req, res) => {
   const staffID = req.user.username;
 

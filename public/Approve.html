@@ -167,12 +167,23 @@
     }
 
     async function updateRequestStatus(request_ID, status) {
+      const token = localStorage.getItem('token'); // ✅ Get JWT
+
       try {
         const response = await fetch(`http://localhost:3000/api/requests/${request_ID}`, {
           method: 'PUT',
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` // ✅ Send token here
+          },
           body: JSON.stringify({ status })
         });
+
+        if (response.status === 401) {
+          alert('Session expired. Please log in again.');
+          window.location.href = '/login.html';
+          return;
+        }
 
         const result = await response.json();
         alert(result.message || 'Status updated.');
