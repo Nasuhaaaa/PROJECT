@@ -8,8 +8,7 @@
 <body>
   <h1>Submit Policy Request</h1>
   <form id="requestForm">
-    <label for="staff_ID">Staff ID:</label><br/>
-    <input type="text" id="staff_ID" name="staff_ID" required><br/><br/>
+    <input type="hidden" id="staff_ID" name="staff_ID" required><br/><br/>
 
     <label for="department_ID">Department:</label><br/>
     <select id="department_ID" name="department_ID" required>
@@ -40,6 +39,7 @@
     const policySelect = document.getElementById('policy_ID');
     const actionSelect = document.getElementById('action');
     const form = document.getElementById('requestForm');
+    const staffInput = document.getElementById('staff_ID');
 
     // Load departments on page load
     window.addEventListener('DOMContentLoaded', () => {
@@ -55,6 +55,20 @@
         .catch(err => {
           alert('Error loading departments: ' + err.message);
         });
+
+      // ✅ Decode staff_ID from token
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('You must be logged in to submit a request.');
+        return;
+      }
+
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        staffInput.value = payload.username; // 👈 Assuming username holds staff_ID
+      } catch (e) {
+        alert('Invalid token format.');
+      }
     });
 
     // Load policies when department changes
@@ -74,7 +88,6 @@
           });
           policySelect.innerHTML = options;
 
-          // Adjust policy select based on action
           if (actionSelect.value === 'upload') {
             policySelect.disabled = true;
             policySelect.required = false;
@@ -89,7 +102,7 @@
         });
     });
 
-    // Disable policy select if action is upload
+    // Toggle policy select when action changes
     actionSelect.addEventListener('change', () => {
       if (actionSelect.value === 'upload') {
         policySelect.disabled = true;
@@ -101,14 +114,29 @@
       }
     });
 
-    // Submit form handler
+    // ✅ Submit form with staff_ID pulled from token
     form.addEventListener('submit', (e) => {
       e.preventDefault();
 
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Not authorized. Please log in.');
+        return;
+      }
+
+      let staff_ID = null;
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        staff_ID = payload.username;
+      } catch {
+        alert('Invalid session. Please log in again.');
+        return;
+      }
+
       const data = {
-        staff_ID: form.staff_ID.value.trim(),
-        department_ID: form.department_ID.value,
-        action: form.action.value,
+        staff_ID,
+        department_ID: departmentSelect.value,
+        action: actionSelect.value,
         policy_ID: policySelect.disabled ? null : policySelect.value
       };
 
@@ -119,7 +147,7 @@
       })
         .then(res => res.json())
         .then(response => {
-          alert('Request submitted successfully.');
+          alert(response.message || 'Request submitted successfully.');
           form.reset();
           policySelect.disabled = false;
           policySelect.required = true;
@@ -127,5 +155,6 @@
         .catch(err => alert('Error submitting request: ' + err.message));
     });
   </script>
+
 </body>
 </html>
