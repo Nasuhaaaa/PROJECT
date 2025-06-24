@@ -165,3 +165,74 @@ CREATE TABLE Audit (
 );
 
 
+ACCESS RIGHT UPDATE
+ALTER TABLE Access_Right
+ADD COLUMN staff_ID VARCHAR(30),
+ADD CONSTRAINT fk_staff_ID FOREIGN KEY (staff_ID) REFERENCES User(staff_ID);
+
+----------------------------------------------------------------------------- 19/6 alter table access_right and permission_request
+ALTER TABLE access_right
+DROP FOREIGN KEY access_right_ibfk_1;
+
+ALTER TABLE permission_request
+DROP FOREIGN KEY permission_request_ibfk_2;
+
+ALTER TABLE access_right
+ADD CONSTRAINT access_right_ibfk_1
+FOREIGN KEY (policy_ID)
+REFERENCES policy(policy_ID)
+ON DELETE CASCADE;
+
+ALTER TABLE permission_request
+ADD CONSTRAINT permission_request_ibfk_2
+FOREIGN KEY (policy_ID)
+REFERENCES policy(policy_ID)
+ON DELETE CASCADE;
+
+
+
+
+CREATE TABLE edited_policy (
+  id INT(11) NOT NULL AUTO_INCREMENT,
+  policy_ID INT(11) NOT NULL,
+  modified_by VARCHAR(255) NOT NULL,
+  file_path VARCHAR(255) NOT NULL,
+  file_format VARCHAR(10) NOT NULL,
+  edited_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  INDEX (policy_ID),
+  CONSTRAINT fk_policy_ID FOREIGN KEY (policy_ID) REFERENCES Policy(policy_ID) ON DELETE CASCADE
+);
+
+
+
+------------------------------------------request table
+ALTER TABLE permission_request ADD COLUMN action_type ENUM('view', 'upload', 'delete', 'edit') NOT NULL AFTER staff_ID;
+
+ALTER TABLE permission_request ADD COLUMN request_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE permission_request
+ADD COLUMN decision_at DATETIME DEFAULT NULL;
+_____________________________________________________________________________________________
+
+
+_____________________________________________ edit policy table
+ALTER TABLE edited_policy
+ADD COLUMN status ENUM('Pending','Approved','Rejected') DEFAULT 'Pending',
+ADD COLUMN reviewed_at DATETIME,
+ADD COLUMN comments TEXT;
+
+
+
+
+----------------------------------------------------------------edit audit table
+ALTER TABLE audit 
+MODIFY action_type ENUM(
+  'LOGIN','LOGOUT','FAILED_LOGIN',
+  'ADD_USER','EDIT_USER','DELETE_USER',
+  'UPLOAD_DOCUMENT','EDIT_DOCUMENT','DELETE_DOCUMENT',
+  'VIEW_DOCUMENT','DOWNLOAD_DOCUMENT',
+  'PERMISSION_APPROVED','PERMISSION_REJECTED',
+  'APPROVED_EDIT','REJECTED_EDIT'
+);
+

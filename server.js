@@ -1,13 +1,20 @@
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
-
 const cors = require('cors');
+const mysql = require('mysql2/promise');
+// const session = require('express-session'); // Optional if using sessions
 const app = express();
 const PORT = 3000;
-const mysql = require('mysql2/promise');
 
-// Import route logic
+// JWT Auth middleware
+const { authenticateUser } = require('./auth');
+
+// Database connections
+const db = require('./Connection_MySQL');
+const accessPool = require('./ConnectionPool_MySQL');
+
+// Route imports
 const fetchRoles = require('./fetchRoles');
 const fetchDepartments = require('./fetchDepartments');
 const addUser = require('./addUser');
@@ -15,47 +22,46 @@ const searchUser = require('./searchUser');
 const uploadPolicyRoute = require('./uploadPolicy');
 const searchPolicy = require('./Search_Policy');
 const loginRoutes = require('./login');
+const logoutRoute = require('./logout');
 const deletePolicyRoute = require('./deletePolicy');
 const editUser = require('./editUser');
 const { deleteUser } = require('./deleteUser');
 const { submitRequest } = require('./request.js');
-const { authenticateUser } = require('./auth');
 const { getPendingRequests, updateRequestStatus } = require('./Approval');
+const displayAudit = require('./displayAudit');
+const policyRoutes = require('./EditedPolicy');
+const { getPendingEditedPolicies, approveEditedPolicy, rejectEditedPolicy } = require('./Approval'); // ⬅️ Add this to top with other imports
+
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static('public')); // serve approve.html from public folder
+app.use(express.static('public'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/edited_uploads', express.static(path.join(__dirname, 'edited_uploads')));
 
-
-/* Use secure access for uploads only
-app.use('/uploads', authenticateUser, (req, res, next) => {
-  if (req.user.role_ID === 1 || req.user.role_ID === 3) {
-    return express.static('uploads')(req, res, next);
-  } else {
-    res.status(403).send('Forbidden: You do not have permission to download files.');
-  }
-});*/
-
+// Routes for policy upload/delete
 app.use('/policy', uploadPolicyRoute);
 app.use('/delete-policy', deletePolicyRoute);
+app.use('/', policyRoutes);
 
-// Serve static files
+// Static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Routes
+// Authentication routes
 app.use('/', loginRoutes);
+app.use('/logout', logoutRoute);
 
+// Roles
 app.get('/getRoles', (req, res) => {
   fetchRoles()
     .then(roles => res.json(roles))
     .catch(err => res.status(500).send('Error fetching roles: ' + err.message));
 });
 
-// Get departments
+// Departments
 app.get('/getDepartments', async (req, res) => {
   try {
     const departments = await fetchDepartments();
@@ -65,9 +71,9 @@ app.get('/getDepartments', async (req, res) => {
   }
 });
 
+// Policy IDs by department
 app.get('/getPolicyIDs', async (req, res) => {
   const department_ID = req.query.department_ID;
-
   if (!department_ID) {
     return res.status(400).json({ error: 'Missing department_ID' });
   }
@@ -94,11 +100,12 @@ app.get('/getPolicyIDs', async (req, res) => {
   }
 });
 
-// Add user (GET form and POST submission)
+// Add user page
 app.get('/addUser', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'Add_User.html'));
 });
 
+// Add user logic
 app.post('/addUser', async (req, res) => {
   try {
     const result = await addUser(req.body);
@@ -108,6 +115,7 @@ app.post('/addUser', async (req, res) => {
   }
 });
 
+// Submit request
 app.post('/submit-request', async (req, res) => {
   try {
     console.log('Received request:', req.body);
@@ -119,9 +127,9 @@ app.post('/submit-request', async (req, res) => {
   }
 });
 
+// Delete user
 app.post('/deleteUser', async (req, res) => {
   const { staff_ID } = req.body;
-
   if (!staff_ID) {
     return res.status(400).send('Missing staff_ID');
   }
@@ -134,6 +142,7 @@ app.post('/deleteUser', async (req, res) => {
   }
 });
 
+// Edit user
 app.post('/editUser', async (req, res) => {
   const { staff_ID, staff_name, staff_email, role_ID, department_ID } = req.body;
   if (!staff_ID || !staff_name || !staff_email || !role_ID || !department_ID) {
@@ -163,6 +172,7 @@ app.get('/getUserDetails', async (req, res) => {
   }
 });
 
+// Search user
 app.get('/searchUser', async (req, res) => {
   const { searchTerm } = req.query;
   try {
@@ -173,15 +183,11 @@ app.get('/searchUser', async (req, res) => {
   }
 });
 
-//--------------------------FORGOT PASSWORD-------------------------------------------------//
-
-// Serve forgot password form
+// Forgot password
 app.get('/forgot-password', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'forgotpassword.html'));
 });
 
-
-// Handle reset password POST (without bcrypt)
 app.post('/reset-password', async (req, res) => {
   const { email, newPassword } = req.body;
 
@@ -193,14 +199,14 @@ app.post('/reset-password', async (req, res) => {
       database: 'policy management system',
       port: 3306
     });
-const [users] = await connection.execute('SELECT * FROM user WHERE staff_email = ?', [email]);
+
+    const [users] = await connection.execute('SELECT * FROM user WHERE staff_email = ?', [email]);
 
     if (users.length === 0) {
       await connection.end();
       return res.send('No user found with this email.');
     }
 
-    // Directly update password (PLAIN TEXT)
     await connection.execute('UPDATE user SET password = ? WHERE staff_email = ?', [newPassword, email]);
     await connection.end();
 
@@ -211,6 +217,7 @@ const [users] = await connection.execute('SELECT * FROM user WHERE staff_email =
   }
 });
 
+// Search policy
 app.get('/policy/search', async (req, res) => {
   const query = req.query.q;
   try {
@@ -222,35 +229,111 @@ app.get('/policy/search', async (req, res) => {
   }
 });
 
-//pending request
+// Get pending requests
 app.get('/api/requests/pending', async (req, res) => {
   try {
     const rows = await getPendingRequests();
     res.json(rows);
   } catch (err) {
     console.error('Error fetching pending requests:', err);
-    res.status(500).json({ error:'Internal server errror'});
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// POST update request status
-app.put('/api/requests/:id', async (req, res) => {
+// ✅ Approve/Deny request — protected with JWT
+app.put('/api/requests/:id', authenticateUser, async (req, res) => {
   const request_ID = req.params.id;
   const { status } = req.body;
-  console.log('Updating request', request_ID, 'to status', status);
+  const actor_ID = req.user?.staff_ID;
+
+  console.log('Updating request', request_ID, 'to status', status, 'by actor', actor_ID);
 
   if (!['APPROVED', 'DENIED'].includes(status?.toUpperCase())) {
     return res.status(400).json({ error: 'Invalid status. Use Approved or Denied.' });
   }
 
+  if (!actor_ID) {
+    return res.status(401).json({ error: 'Unauthorized: Missing actor ID' });
+  }
+
   try {
-    const result = await updateRequestStatus(request_ID, status);
+    const result = await updateRequestStatus(request_ID, status, actor_ID);
     res.json(result);
   } catch (err) {
     console.error('Error updating request status:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// Audit route
+app.use('/api', displayAudit);
+
+// Audit page
+app.get('/audit-table', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'auditTable.html'));
+});
+
+// Check if current user has upload access
+app.get('/api/has-upload-access', authenticateUser, async (req, res) => {
+  const staffID = req.user.username;
+
+  try {
+    const [rows] = await accessPool.query(
+      `SELECT 1 FROM access_right WHERE staff_ID = ? AND permission_ID = 4`,
+      [staffID]
+    );
+
+    res.json({ hasUploadAccess: rows.length > 0 });
+  } catch (err) {
+    console.error('Error checking upload access:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
+// Get pending edited policies
+app.get('/api/edited-policies/pending', async (req, res) => {
+  try {
+    const rows = await getPendingEditedPolicies();
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching edited policies:', err);
+    res.status(500).json({ error: 'Failed to load pending edits' });
+  }
+});
+
+// Approve edited policy
+app.post('/api/policy/approve-edit', async (req, res) => {
+  const { edit_id, approver_ID } = req.body;
+  if (!edit_id || !approver_ID) {
+    return res.status(400).json({ error: 'Missing edit_id or approver_ID' });
+  }
+
+  try {
+    const result = await approveEditedPolicy(edit_id, approver_ID);
+    res.status(200).json({ message: 'Policy updated successfully', result });
+  } catch (err) {
+    console.error('Error approving edited policy:', err);
+    res.status(500).json({ error: 'Error during policy approval' });
+  }
+});
+
+// Reject edited policy
+app.post('/api/policy/reject-edit', async (req, res) => {
+  const { edit_id, approver_ID } = req.body;
+  if (!edit_id || !approver_ID) {
+    return res.status(400).json({ error: 'Missing edit_id or approver_ID' });
+  }
+
+  try {
+    const result = await rejectEditedPolicy(edit_id, approver_ID);
+    res.status(200).json({ message: 'Policy edit rejected successfully', result });
+  } catch (err) {
+    console.error('Error rejecting edited policy:', err);
+    res.status(500).json({ error: 'Error during policy rejection' });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

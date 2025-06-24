@@ -90,36 +90,51 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="sidebar">
-      <h2>User Panel</h2>
-      <button class="menu-button" onclick="location.href='/SearchPolicy.html'">Search Documents</button>
-    </div>
+  <h1>Welcome to your User Dashboard</h1>
 
-    <div class="main-content">
-      <h1>Welcome to your User Dashboard</h1>
-    </div>
+  <!-- Common features for all users -->
+  <div>
+    <button onclick="location.href='/SearchPolicy.html'">Search Documents</button>
+    <button onclick="location.href='/request.html'">Request Access to Documents</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <!-- Hidden by default; shown if user has upload permission -->
+  <div id="uploadSection" style="display: none; margin-top: 10px;">
+    <button onclick="location.href='/upload.html'">Upload Document</button>
   </div>
 
   <script>
-    // Auth check
-    if (!localStorage.getItem('token')) {
+    // Ensure this page is accessed only by logged-in users
+    const token = localStorage.getItem('token');
+    if (!token) {
       window.location.href = '/login.html';
     } else {
-      const token = localStorage.getItem('token');
-      try {
-        const decodedToken = JSON.parse(atob(token.split('.')[1]));
-        if (decodedToken.role_ID === 2) {
-          window.location.href = '/editor_dashboard.html';
-        } else if (decodedToken.role_ID !== 3) {
-          window.location.href = '/login.html';
-        }
-      } catch (e) {
-        console.error('Invalid token');
-        localStorage.removeItem('token');
+      const decodedToken = JSON.parse(atob(token.split('.')[1]));
+
+      if (decodedToken.role_ID === 2) {
+        window.location.href = '/editor_dashboard.html';
+      } else if (decodedToken.role_ID !== 3) {
         window.location.href = '/login.html';
+      } else {
+        // ✅ User is role_ID 3, check if they have upload access
+        fetch('/api/has-upload-access', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.hasUploadAccess) {
+            document.getElementById('uploadSection').style.display = 'block';
+          }
+        })
+        .catch(err => console.error('Access check failed', err));
       }
     }
   </script>
+
+  <script src="/logout.js"></script>
 </body>
 </html>

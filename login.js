@@ -23,12 +23,19 @@ router.post('/login', (req, res) => {
       const user = results[0];
 
       if (user.password === password) {
+        // const token = generateToken({
+        //   username: user.staff_ID,
+        //   role_ID: user.role_ID,
+        // });
         const token = generateToken({
-          username: user.staff_ID,
-          role_ID: user.role_ID,
-        });
+  username: user.staff_ID,
+  role_ID: user.role_ID,
+  staff_ID: user.staff_ID,
+  department_ID: user.department_ID
+});
 
-        // ✅ Successful login audit log
+
+        // Successful login audit log
         await logAuditAction({
           actor_ID: user.staff_ID,
           action_type: 'LOGIN',
@@ -37,24 +44,24 @@ router.post('/login', (req, res) => {
 
         return res.json({ token });
       } else {
-        // ❌ Failed login with valid user ID
+        // Failed login with valid user ID
         await logAuditAction({
           actor_ID: user.staff_ID,
           action_type: 'FAILED_LOGIN',
           description: 'User entered incorrect password',
         });
 
-        return res.status(401).send('Invalid credentials');
+        return res.status(401).send('Incorrect Password');
       }
     } else {
-      // ❌ Failed login for non-existent user
+      // Failed login for non-existent user
       await logAuditAction({
         actor_ID: null,
         action_type: 'FAILED_LOGIN',
         description: `Login attempt with invalid staff ID: ${staffId}`,
       });
 
-      return res.status(401).send('Invalid credentials');
+      return res.status(401).send('Invalid Staff ID');
     }
   });
 });

@@ -37,6 +37,8 @@
       z-index: 1;
       position: relative;
       overflow-x: auto;
+      max-height: 90vh;
+      overflow-y: auto;
     }
 
     h2 {
@@ -49,6 +51,7 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 0.95rem;
+      margin-bottom: 2rem;
     }
 
     th, td {
@@ -97,7 +100,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>Pending Policy Requests</h2>
+    <h2>Pending Permission Requests</h2>
     <table id="requestsTable">
       <thead>
         <tr>
@@ -113,16 +116,24 @@
       </thead>
       <tbody></tbody>
     </table>
+
+    <h2>Pending Edited Policy Approvals</h2>
+    <table id="editedTable">
+      <thead>
+        <tr>
+          <th>Edit ID</th>
+          <th>Policy ID</th>
+          <th>Policy Name</th>
+          <th>Modified By</th>
+          <th>Upload Time</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
   <script>
-    const permissionMap = {
-      1: 'View',
-      2: 'Upload',
-      3: 'Delete',
-      4: 'Edit'
-    };
-
     async function fetchPendingRequests() {
       try {
         const response = await fetch('http://localhost:3000/api/requests/pending');
@@ -156,12 +167,23 @@
     }
 
     async function updateRequestStatus(request_ID, status) {
+      const token = localStorage.getItem('token'); // ✅ Get JWT
+
       try {
         const response = await fetch(`http://localhost:3000/api/requests/${request_ID}`, {
           method: 'PUT',
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` // ✅ Send token here
+          },
           body: JSON.stringify({ status })
         });
+
+        if (response.status === 401) {
+          alert('Session expired. Please log in again.');
+          window.location.href = '/login.html';
+          return;
+        }
 
         const result = await response.json();
         alert(result.message || 'Status updated.');
@@ -172,7 +194,125 @@
       }
     }
 
-    window.onload = fetchPendingRequests;
+    async function fetchEditedPolicies() {
+      try {
+        const response = await fetch('http://localhost:3000/api/edited-policies/pending');
+        if (!response.ok) throw new Error(`Server error: ${response.status}`);
+
+        const edits = await response.json();
+        const tbody = document.querySelector('#editedTable tbody');
+        tbody.innerHTML = '';
+
+        edits.forEach(edit => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${edit.id}</td>
+            <td>${edit.policy_ID}</td>
+            <td>${edit.policy_name}</td>
+            <td>${edit.staff_name}</td>
+            <td>${new Date(edit.uploaded_at).toLocaleString()}</td>
+            <td>
+              <button onclick="approveEditedPolicy(${edit.id})">Approve</button>
+              <button onclick="rejectEditedPolicy(${edit.id})">Reject</button>
+
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Error fetching edited policies:', error);
+        alert('Failed to load edited policies.');
+      }
+    }
+
+    async function approveEditedPolicy(editID) {
+      const approver_ID = getStaffIdFromToken();
+
+      if (!editID) {
+        alert("Missing edit ID");
+        return;
+      }
+
+      if (!approver_ID) {
+        alert("Missing approver ID");
+        return;
+      }
+
+      try {
+        const response = await fetch(`http://localhost:3000/api/policy/approve-edit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ edit_id: editID, approver_ID })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Approval failed');
+        }
+
+        alert(result.message || 'Edited policy approved.');
+        fetchEditedPolicies();
+      } catch (error) {
+        console.error('Approval failed:', error);
+        alert(error.message);
+      }
+    }
+
+    async function rejectEditedPolicy(editId) {
+      const approver_ID = getStaffIdFromToken(); // or sessionStorage
+
+      if (!editId) {
+        alert("Missing edit ID");
+        return;
+      }
+
+      if (!approver_ID) {
+        alert("Missing approver ID");
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/policy/reject-edit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            edit_id: editId,
+            approver_ID: approver_ID
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Rejection failed');
+        }
+
+        alert(data.message);
+        // Optionally refresh the list
+      } catch (err) {
+        console.error('Error rejecting edited policy:', err);
+        alert(err.message);
+      }
+    }
+
+    function getStaffIdFromToken() {
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.staff_ID;  // Assuming your token contains staff_ID
+      } catch (err) {
+        console.error('Invalid token:', err);
+        return null;
+      }
+    }
+
+
+    window.onload = () => {
+      fetchPendingRequests();
+      fetchEditedPolicies();
+    };
   </script>
 </body>
 </html>
