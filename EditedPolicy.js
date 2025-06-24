@@ -5,6 +5,7 @@ const fs = require('fs');
 const connectToDatabase = require('./Connection_MySQL');
 const { sendPolicyUpdateEmail } = require('./emailService');
 const logAuditAction = require('./logAuditAction');
+const { authenticateUser } = require('./auth');
 
 const router = express.Router();
 const db = connectToDatabase();
@@ -35,29 +36,83 @@ const normalizeFormat = (format) => {
   return f.startsWith('.') ? f : '.' + f;
 };
 
-router.post('/policy/update', upload.single('policyFile'), async (req, res) => {
-  const { policy_ID, modified_by, file_format } = req.body;
+router.post('/policy/update', authenticateUser, upload.single('policyFile'), async (req, res) => {
+  const { policy_ID, file_format } = req.body;
   const file = req.file;
 
-  console.log('Incoming form data:');
-  console.log('policy_ID:', policy_ID);
-  console.log('modified_by:', modified_by);
-  console.log('file_format:', file_format);
-  console.log('uploaded file:', file ? file.originalname : 'No file');
+  const modifier_ID = req.user.username;
+  const userRole = req.user.role_ID;
 
-  if (!policy_ID || !modified_by || !file_format || !file) {
+  if (!policy_ID || !file_format || !file || !modifier_ID) {
     return res.status(400).json({ error: 'Missing required fields or file' });
   }
 
+  try {
+    const [[user]] = await db.promise().query(
+      'SELECT staff_name, department_ID FROM user WHERE staff_ID = ?',
+      [modifier_ID]
+    );
+
+    const [[policy]] = await db.promise().query(
+      'SELECT policy_name, department_ID FROM policy WHERE policy_ID = ?',
+      [policy_ID]
+    );
+
+    if (!user || !policy) {
+      return res.status(404).json({ error: 'User or Policy not found' });
+    }
+
+    const actor_name = user.staff_name;
+    const userDeptID = user.department_ID;
+    const policyDeptID = policy.department_ID;
+    const policy_name = policy.policy_name;
+
+    const [perm] = await db.promise().query(
+      'SELECT permission_ID FROM permission WHERE permission_name = "Edit Document"'
+    );
+
+    const permission_ID = perm[0]?.permission_ID;
+
+    const [access] = await db.promise().query(`
+      SELECT COUNT(*) AS count 
+      FROM access_right 
+      WHERE staff_ID = ? AND policy_ID = ? AND permission_ID = ?
+    `, [modifier_ID, policy_ID, permission_ID]);
+
+    const hasAccess = access[0]?.count > 0;
+    const hasRoleAccess = (
+      userRole === 1 ||
+      (userRole === 2 && userDeptID === policyDeptID)
+    );
+
+    if (!hasAccess && !hasRoleAccess) {
+      await logAuditAction({
+        actor_ID: modifier_ID,
+        actor_name,
+        action_type: 'UNAUTHORIZED_ACCESS',
+        policy_ID,
+        policy_name,
+        description: `Unauthorized attempt to edit policy "${policy_name}" by ${modifier_ID}`
+      });
+      return res.status(403).json({ error: 'Permission denied' });
+    }
+
+    req.body.modified_by = modifier_ID;
+    return handleEditPolicyUpload(req, res, file_format, file, modifier_ID, userDeptID, actor_name, policy_name);
+
+  } catch (err) {
+    console.error('Access control error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+async function handleEditPolicyUpload(req, res, file_format, file, modifier_ID, department_ID, actor_name, policy_name) {
+  const policy_ID = req.body.policy_ID;
   const declaredFormat = normalizeFormat(file_format);
   const fileExt = path.extname(file.originalname).toLowerCase();
 
-  if (!allowedFormats.includes(declaredFormat)) {
-    return res.status(400).json({ error: 'Invalid file format declared' });
-  }
-
-  if (fileExt !== declaredFormat) {
-    fs.unlink(file.path, () => {}); // Delete file if mismatch
+  if (!allowedFormats.includes(declaredFormat) || fileExt !== declaredFormat) {
+    fs.unlink(file.path, () => {});
     return res.status(400).json({
       error: `File extension (${fileExt}) does not match declared format (${declaredFormat})`
     });
@@ -66,137 +121,19 @@ router.post('/policy/update', upload.single('policyFile'), async (req, res) => {
   const cleanPath = file.path.replace(/\\/g, '/');
 
   try {
-    const [existingPolicy] = await db.promise().query(
-      'SELECT * FROM Policy WHERE policy_ID = ?',
-      [policy_ID]
-    );
-
-    if (existingPolicy.length === 0) {
-      return res.status(400).json({ error: `Policy with ID ${policy_ID} does not exist` });
-    }
-
-    // Insert into edited_policy
     await db.promise().query(
       'INSERT INTO edited_policy (policy_ID, modified_by, file_path, file_format, edited_at) VALUES (?, ?, ?, ?, NOW())',
-      [policy_ID, modified_by, cleanPath, declaredFormat]
+      [policy_ID, modifier_ID, cleanPath, declaredFormat]
     );
 
-    // --- NEW: Update main Policy table ---
-    /*await db.promise().query(
-      `UPDATE Policy 
-       SET file_path = ?, 
-           file_format = ?, 
-           last_updated = NOW(), 
-           modified_by = ?
-       WHERE policy_ID = ?`,
-      [cleanPath, declaredFormat, modified_by, policy_ID]
-    );*/
-
-    // Email Notification Section
-    try {
-      const [editorRows] = await db.promise().query(
-        'SELECT staff_name, staff_email, department_ID FROM user WHERE staff_ID = ?',
-        [modified_by]
-      );
-
-      const editor = editorRows[0];
-      const toActor = editor?.staff_email;
-      const department_ID = editor?.department_ID;
-
-      const [adminRows] = await db.promise().query(
-        'SELECT staff_email FROM user WHERE LOWER(role_ID) = "admin"'
-      );
-      const adminEmails = adminRows.map(row => row.staff_email).filter(Boolean);
-
-      const [deptRows] = await db.promise().query(
-        'SELECT staff_email FROM user WHERE department_ID = ? AND staff_ID != ?',
-        [department_ID, modified_by]
-      );
-      const deptEmails = deptRows.map(row => row.staff_email).filter(Boolean);
-
-      const uploadedAt = new Date().toLocaleString();
-
-      // 1. Email to actor
-      if (toActor) {
-        const subject = `Your Policy Update: ID ${policy_ID}`;
-        const message = `
-Hi ${editor.staff_name},
-
-You have successfully updated Policy ID ${policy_ID}.
-
-File: ${file.filename}
-Format: ${declaredFormat}
-Uploaded At: ${uploadedAt}
-
-This update has been shared with your department and administrators.
-
-Regards,  
-Policy Management System
-        `.trim();
-
-        await sendPolicyUpdateEmail(toActor, subject, message);
-        console.log('Email sent to actor:', toActor);
-      }
-
-      // 2. Email to admins
-      for (const email of adminEmails) {
-        const subject = `Policy Updated by ${editor.staff_name}`;
-        const message = `
-Dear Admin,
-
-Staff ${editor.staff_name} (ID: ${modified_by}) has updated Policy ID ${policy_ID}.
-
-File: ${file.filename}
-Format: ${declaredFormat}
-Timestamp: ${uploadedAt}
-
-Regards,  
-Policy Management System
-        `.trim();
-
-        await sendPolicyUpdateEmail(email, subject, message);
-        console.log('Email sent to admin:', email);
-      }
-
-      // 3. Email to department (excluding actor)
-      for (const email of deptEmails) {
-        const subject = `Policy Updated in Your Department`;
-        const message = `
-Hi,
-
-Your colleague ${editor.staff_name} has updated Policy ID ${policy_ID}.
-
-File: ${file.filename}
-Format: ${declaredFormat}
-Time: ${uploadedAt}
-
-Stay informed with the latest changes.
-
-Regards,  
-Policy Management System
-        `.trim();
-
-        await sendPolicyUpdateEmail(email, subject, message);
-        console.log('Email sent to department member:', email);
-      }
-
-    } catch (emailErr) {
-      console.error('Email notification failed:', emailErr.message);
-    }
-
-    // --- AUDIT TRAIL LOGGING ---
-    try {
-      await logAuditAction({
-        actor_ID: modified_by,
-        action_type: 'EDIT_DOCUMENT',
-        policy_ID,
-        policy_name: existingPolicy[0].policy_name,
-        description: `Policy "${existingPolicy[0].policy_name}" (ID: ${policy_ID}) was edited and uploaded as "${file.filename}" by staff_ID ${modified_by}.`
-      });
-      console.log('Audit log recorded.');
-    } catch (auditErr) {
-      console.error('Audit logging failed:', auditErr.message);
-    }
+    await logAuditAction({
+      actor_ID: modifier_ID,
+      actor_name,
+      action_type: 'EDIT_DOCUMENT',
+      policy_ID,
+      policy_name,
+      description: `Policy "${policy_name}" edited and uploaded by ${modifier_ID}`
+    });
 
     return res.status(200).json({
       message: 'Edited policy uploaded successfully',
@@ -206,9 +143,9 @@ Policy Management System
     });
 
   } catch (err) {
-    console.error('DB INSERT ERROR:', err);
-    return res.status(500).json({ error: 'Database error', details: err.message });
+    console.error('Upload logic error:', err);
+    return res.status(500).json({ error: 'Upload or database error' });
   }
-});
+}
 
 module.exports = router;

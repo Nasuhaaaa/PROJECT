@@ -26,9 +26,6 @@
   <form id="editPolicyForm" enctype="multipart/form-data">
     <input type="hidden" id="policy_ID" name="policy_ID"/>
 
-    <label for="modified_by">Modified By (Staff ID):</label>
-    <input type="text" id="modified_by" name="modified_by" required />
-
     <label for="file_format">File Format:</label>
     <select id="file_format" name="file_format">
       <option value="pdf">PDF</option>
@@ -86,16 +83,30 @@
       try {
         const res = await fetch('/policy/update', {
           method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
           body: formData
         });
 
         const data = await res.json();
-        response.innerText = `✅ ${data.message || 'Upload successful.'}`;
-        response.style.color = 'green';
-      } catch (err) {
-        response.innerText = '❌ Upload failed.';
-        response.style.color = 'red';
-      }
+
+          if (res.status === 403) {
+            response.innerText = `❌ Permission denied: You are not allowed to edit this policy.`;
+            response.style.color = 'red';
+          } else if (!res.ok) {
+            response.innerText = `❌ Error: ${data.error || 'Upload failed.'}`;
+            response.style.color = 'red';
+          } else {
+            response.innerText = `✅ ${data.message || 'Upload successful.'}`;
+            response.style.color = 'green';
+          }
+
+        } catch (err) {
+          console.error('Upload error:', err);
+          response.innerText = '❌ Upload failed due to a network error.';
+          response.style.color = 'red';
+        }
 
       response.style.display = 'block';
 
