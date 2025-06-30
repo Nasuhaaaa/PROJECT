@@ -212,10 +212,11 @@
             <td>${edit.staff_name}</td>
             <td>${new Date(edit.uploaded_at).toLocaleString()}</td>
             <td>
+             <button onclick="window.open('/${edit.file_path}', '_blank')">View</button>
               <button onclick="approveEditedPolicy(${edit.id})">Approve</button>
               <button onclick="rejectEditedPolicy(${edit.id})">Reject</button>
-
             </td>
+
           `;
           tbody.appendChild(row);
         });
