@@ -1,28 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login</title>
-  <link rel="stylesheet" href="login.css">
+  <link rel="stylesheet" href="login.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="login-container">
-    <h2>Staff Login</h2>
-<form id="loginForm">
-  <label>Staff ID:
-    <input type="text" id="staffId" required />
-  </label><br />
-  <label>Password:
-    <input type="password" id="password" required />
-  </label><br />
-  <button type="submit">Login</button>
-  <p id="errorMsg" style="color: red; margin-top: 10px;"></p>
-</form>
+    
+    <!-- Left panel with Welcome -->
+    <div class="login-left">
+      <h1>WELCOME</h1>
+    </div>
+
+    <!-- Right panel with login form -->
+    <div class="login-right">
+      <h2>Staff Login</h2>
+      <form id="loginForm">
+        <label for="staffId">Staff ID:</label>
+        <input type="text" id="staffId" name="staffId" required placeholder="Enter Staff ID" />
+
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required placeholder="Enter Password" />
+
+        <button type="submit">Login</button>
+        <p id="errorMsg" style="color: red; margin-top: 10px;"></p>
+
+        <div class="login-links">
+          <a href="forgotpassword.html">Forgot Password?</a>
+        </div>
+      </form>
+    </div>
 
   </div>
 
-  <p id="response"></p>
   <script src="frontend_login.js"></script>
 </body>
 </html>

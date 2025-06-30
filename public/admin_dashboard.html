@@ -4,141 +4,112 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin Dashboard</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to top, #410f1c, #965867, #fcb9cd);
-      height: 100vh;
-      display: flex;
-      background-image: url('https://i.pinimg.com/736x/16/d6/65/16d665f720e722cc84952486a0c42798.jpg'); /* Replace if needed */
-      background-size: cover;
-      background-position: center;
-      position: relative;
-      color: #360012;
-    }
-
-    body::before {
-      content: "";
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: linear-gradient(to top, rgba(50, 0, 23, 0.6), transparent);
-      z-index: 0;
-    }
-
-    .container {
-      display: flex;
-      width: 100%;
-      height: 100%;
-      position: relative;
-      z-index: 1;
-    }
-
-    .sidebar {
-      width: 260px;
-      background-color: white;
-      padding: 2rem 1rem;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 5px 0 15px rgba(0, 0, 0, 0.2);
-    }
-
-    .sidebar h2 {
-      text-align: center;
-      margin-bottom: 2rem;
-      color: #5b0e2c;
-    }
-
-    .menu-button {
-      background-color: #5b0e2c;
-      color: white;
-      border: none;
-      border-radius: 25px;
-      padding: 0.75rem 1rem;
-      margin: 0.4rem 0;
-      text-align: left;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-      width: 100%;
-      font-size: 1rem;
-    }
-
-    .menu-button:hover {
-      background-color: #7b193f;
-    }
-
-    .submenu {
-      display: none;
-      margin: 0.3rem 0 0.6rem 0.5rem;
-    }
-
-    .submenu button {
-      background-color: #fbc1d3;
-      color: #440020;
-      border: none;
-      border-radius: 20px;
-      padding: 0.5rem 1rem;
-      margin: 0.3rem 0;
-      width: 90%;
-      font-size: 0.95rem;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-
-    .submenu button:hover {
-      background-color: #f89bb6;
-    }
-
-    .main-content {
-      flex: 1;
-      padding: 3rem;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-    }
-
-    .main-content h1 {
-      font-size: 2rem;
-      color: #ffffff;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
-    }
-  </style>
+  <link rel="stylesheet" href="admindashboard.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
+  <!-- Header -->
+  <header class="dashboard-header">
+    <h1>Admin Dashboard</h1>
+    <div class="profile">
+      <span class="username">Admin</span>
+      <img src="https://ui-avatars.com/api/?name=Admin&background=5a3f80&color=fff" alt="Profile" />
+    </div>
+  </header>
+
   <div class="container">
-    <div class="sidebar">
+    <!-- Sidebar -->
+    <aside class="sidebar">
       <h2>Admin Panel</h2>
-      
-      <button class="menu-button" onclick="toggleMenu('userMenu')">Manage Users</button>
-      <div id="userMenu" class="submenu">
-        <button onclick="location.href='/Add_User.html'">Add User</button>
-        <button onclick="location.href='/searchUser.html'">Search User</button>
+
+      <div class="menu">
+        <button class="menu-button" onclick="toggleMenu('userMenu')">
+          <i data-lucide="users"></i> Manage Users
+        </button>
+        <div id="userMenu" class="submenu">
+          <button onclick="location.href='/Add_User.html'">
+            <i data-lucide="user-plus"></i> Add User
+          </button>
+          <button onclick="location.href='/searchUser.html'">
+            <i data-lucide="search"></i> Search User
+          </button>
+        </div>
+
+        <button class="menu-button" onclick="toggleMenu('docMenu')">
+          <i data-lucide="file-text"></i> Manage Documents
+        </button>
+        <div id="docMenu" class="submenu">
+          <button onclick="location.href='/upload.html'">
+            <i data-lucide="upload"></i> Upload Document
+          </button>
+          <button onclick="location.href='/SearchPolicy.html'">
+            <i data-lucide="file-search"></i> Search Document
+          </button>
+        </div>
+
+        <button class="menu-button" onclick="location.href='/Approve.html'">
+          <i data-lucide="check-circle"></i> Pending Request
+        </button>
+        <button class="menu-button" onclick="location.href='/auditTable.html'">
+          <i data-lucide="bar-chart-2"></i> Audit
+        </button>
       </div>
 
-      <button class="menu-button" onclick="toggleMenu('docMenu')">Manage Documents</button>
-      <div id="docMenu" class="submenu">
-        <button onclick="location.href='/upload.html'">Add Policy</button>
-        <button onclick="location.href='/SearchPolicy.html'">Search Policy</button>
-        <button onclick="location.href='/Approve.html'">Pending Request</button>
-        <button onclick="location.href='/auditTable.html'">Audit</button>
+      <div class="sidebar-footer">
+        <button class="menu-button logout" onclick="logout()">
+          <i data-lucide="log-out"></i> Logout
+        </button>
       </div>
-       <button onclick="logout()">Logout</button>
-    </div>
+    </aside>
 
-    <div class="main-content">
-      <h1>Welcome to your Admin Dashboard</h1>
-    </div>
+    <!-- Main Content -->
+    <main class="main-content">
+      <section class="stat-cards">
+        <div class="card">
+          <h3>Total Users</h3>
+          <p>52</p>
+        </div>
+        <div class="card">
+          <h3>Pending Approvals</h3>
+          <p>8</p>
+        </div>
+        <div class="card">
+          <h3>Total Documents</h3>
+          <p>134</p>
+        </div>
+      </section>
+
+      <section class="document-table">
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Role</th>
+              <th>Last Login</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>noraini@example.com</td>
+              <td>Editor</td>
+              <td>2025-06-29</td>
+              <td>Active</td>
+            </tr>
+            <tr>
+              <td>ali@example.com</td>
+              <td>User</td>
+              <td>2025-06-28</td>
+              <td>Inactive</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
   </div>
 
   <script>
-    // Auth check
     if (!localStorage.getItem('token')) {
       window.location.href = '/login.html';
     } else {
@@ -149,14 +120,19 @@
       }
     }
 
-    // Toggle submenu
     function toggleMenu(menuId) {
       const menu = document.getElementById(menuId);
       const isVisible = menu.style.display === 'block';
       document.querySelectorAll('.submenu').forEach(el => el.style.display = 'none');
       if (!isVisible) menu.style.display = 'block';
     }
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = '/login.html';
+    }
+
+    lucide.createIcons();
   </script>
-  <script src="/logout.js"></script>
 </body>
 </html>

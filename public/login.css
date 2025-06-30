@@ -1,21 +1,30 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
 
-/* General body styling */
-body {
+/* Base Reset */
+* {
   margin: 0;
   padding: 0;
-  font-family: 'Segoe UI', sans-serif;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
   background-image: url('https://i.pinimg.com/736x/16/d6/65/16d665f720e722cc84952486a0c42798.jpg');
   background-size: cover;
   background-position: center;
-  height: 100vh;
+  background-repeat: no-repeat;
+  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   position: relative;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Optional overlay */
+/* Background overlay with blur */
 body::before {
   content: "";
   position: absolute;
@@ -25,6 +34,7 @@ body::before {
   z-index: 0;
 }
 
+/* Login container */
 .login-container {
   display: flex;
   width: 800px;
@@ -37,10 +47,10 @@ body::before {
   z-index: 1;
 }
 
-/* Left side */
+/* Left panel */
 .login-left {
   flex: 1;
-  background-color: rgba(24, 0, 51, 0.7); /* Deep violet tone */
+  background-color: rgba(24, 0, 51, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -53,7 +63,7 @@ body::before {
   text-shadow: 0 2px 5px rgba(0, 0, 0, 0.6);
 }
 
-/* Right side */
+/* Right panel (form area) */
 .login-right {
   flex: 1;
   background-color: rgba(255, 255, 255, 0.9);
@@ -63,8 +73,9 @@ body::before {
   justify-content: center;
 }
 
-h2 {
+.login-right h2 {
   text-align: center;
+  font-family: 'Playfair Display', serif;
   color: #2c003e;
   margin-bottom: 1.5rem;
 }
@@ -74,6 +85,8 @@ label {
   font-family: 'Playfair Display', serif;
   color: #2c003e;
   font-size: 1rem;
+  display: block;
+  margin-bottom: 6px;
 }
 
 /* Input fields */
@@ -81,11 +94,10 @@ input[type="text"],
 input[type="password"] {
   width: 100%;
   padding: 0.75rem;
-  margin-top: 5px;
   margin-bottom: 1rem;
   border: none;
   border-radius: 25px;
-  background-color: #d8d0f7; /* subtle lavender */
+  background-color: #d8d0f7;
   color: #1f002e;
   font-size: 1rem;
   outline: none;
@@ -101,18 +113,19 @@ button[type="submit"] {
   padding: 0.75rem;
   border: none;
   border-radius: 25px;
-  background-color: #3f004d; /* rich violet */
+  background-color: #8d2f79;
   color: white;
   font-size: 1rem;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, transform 0.3s ease;
 }
 
 button:hover {
-  background-color: #5d1c6d;
+  background-color: #752b69;
+  transform: scale(1.05);
 }
 
-/* Forgot password link */
+/* Forgot password / links */
 .login-links {
   text-align: center;
   margin-top: 1rem;
@@ -128,7 +141,7 @@ button:hover {
   text-decoration: underline;
 }
 
-/* Responsive */
+/* Responsive design */
 @media (max-width: 768px) {
   .login-container {
     flex-direction: column;

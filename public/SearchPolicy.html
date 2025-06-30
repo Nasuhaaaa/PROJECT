@@ -1,30 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Search Policies</title>
-  
+  <meta charset="UTF-8" />
+  <title>Search Document</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet" />
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="searchpolicy.css" />
 </head>
+
 <body>
   <div class="container">
-    <h1>Search Policy</h1>
-    <input type="text" id="searchQuery" placeholder="Enter search keyword..." />
-    <button onclick="searchPolicy()">Search</button>
+    <h1>Search Document</h1>
 
-  <h2>Results</h2>
-  <table id="resultsTable" style="display:none;">
-    <thead>
-      <tr>
-        <th>Policy Name</th>
-        <th>View</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="resultsBody"></tbody>
-  </table>
+    <!-- Search Bar with Blur Box -->
+    <div class="search-box">
+      <div class="search-bar">
+        <input type="text" id="searchQuery" placeholder="Enter search keyword..." />
+        <button onclick="searchPolicy()">Search</button>
+      </div>
+    </div>
 
-  <p id="noResults" style="color: red;"></p>
+    <!-- Results Section -->
+    <h2>Results</h2>
+    <table id="resultsTable" style="display:none;">
+      <thead>
+        <tr>
+          <th>Policy Name</th>
+          <th>View</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody"></tbody>
+    </table>
 
+    <p id="noResults" class="no-results"></p>
+  </div>
+
+  <!-- JavaScript to search and replace -->
   <script src="Search_Policy2.js"></script>
 </body>
 </html>
