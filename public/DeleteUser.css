@@ -1,0 +1,127 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Poppins:wght@300;400;600&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background-image: url('https://i.pinimg.com/736x/16/d6/65/16d665f720e722cc84952486a0c42798.jpg');
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
+  min-height: 100vh;
+  color: #fefbff;
+  padding: 40px 20px;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 0;
+}
+
+/* Header */
+header {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.5rem;
+  color: #ffe9ff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+nav {
+  margin-top: 10px;
+}
+
+nav a {
+  color: #ffd1fe;
+  margin: 0 12px;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+/* Main Content */
+main {
+  position: relative;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 30px;
+  border-radius: 20px;
+  max-width: 600px;
+  margin: 0 auto;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+}
+
+main h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  color: #3f004d;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+form#deleteUserForm p {
+  color: #2e0039;
+  margin-bottom: 15px;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+/* Delete Button */
+form#deleteUserForm button[type="submit"] {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 25px;
+  background-color: #b12988;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+form#deleteUserForm button:hover {
+  background-color: #bd5ead;
+  transform: scale(1.03);
+}
+
+/* Footer */
+footer {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  margin-top: 40px;
+  color: #ffe9ff;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 600px) {
+  header h1 {
+    font-size: 1.8rem;
+  }
+
+  main {
+    padding: 20px;
+  }
+
+  main h2 {
+    font-size: 1.5rem;
+  }
+}
