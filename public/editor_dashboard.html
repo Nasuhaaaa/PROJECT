@@ -4,122 +4,116 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Editor Dashboard</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to top, #410f1c, #965867, #fcb9cd);
-      height: 100vh;
-      display: flex;
-      background-image: url('https://i.pinimg.com/736x/16/d6/65/16d665f720e722cc84952486a0c42798.jpg'); /* Replace if needed */
-      background-size: cover;
-      background-position: center;
-      position: relative;
-      color: #360012;
-    }
-
-    body::before {
-      content: "";
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: linear-gradient(to top, rgba(50, 0, 23, 0.6), transparent);
-      z-index: 0;
-    }
-
-    .container {
-      display: flex;
-      width: 100%;
-      height: 100%;
-      position: relative;
-      z-index: 1;
-    }
-
-    .sidebar {
-      width: 260px;
-      background-color: white;
-      padding: 2rem 1rem;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 5px 0 15px rgba(0, 0, 0, 0.2);
-    }
-
-    .sidebar h2 {
-      text-align: center;
-      margin-bottom: 2rem;
-      color: #5b0e2c;
-    }
-
-    .menu-button {
-      background-color: #5b0e2c;
-      color: white;
-      border: none;
-      border-radius: 25px;
-      padding: 0.75rem 1rem;
-      margin: 0.4rem 0;
-      text-align: left;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-      width: 100%;
-      font-size: 1rem;
-    }
-
-    .menu-button:hover {
-      background-color: #7b193f;
-    }
-
-    .main-content {
-      flex: 1;
-      padding: 3rem;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-    }
-
-    .main-content h1 {
-      font-size: 2rem;
-      color: #ffffff;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
-    }
-  </style>
+  <link rel="stylesheet" href="editordashboard.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
+  <!-- Header -->
+  <header class="dashboard-header">
+    <h1>Editor Dashboard</h1>
+    
+  </header>
+
   <div class="container">
-    <div class="sidebar">
+    <!-- Sidebar -->
+    <aside class="sidebar">
       <h2>Editor Panel</h2>
+      
+      <div class="menu">
+        <button class="menu-button" onclick="location.href='/upload.html'">
+          <i data-lucide="upload"></i> Upload Document
+        </button>
+        
+        <button class="menu-button" onclick="location.href='/SearchPolicy.html'">
+          <i data-lucide="file-search"></i> Search Documents
+        </button>
+      </div>
+      
+      <div class="sidebar-footer">
+        <button class="menu-button logout" onclick="logout()">
+          <i data-lucide="log-out"></i> Logout
+        </button>
+      </div>
+    </aside>
 
-      <button class="menu-button" onclick="location.href='/upload.html'">Upload Document</button>
-      <button class="menu-button" onclick="location.href='/SearchPolicy.html'">Search Documents</button>
-      <button onclick="logout()">Logout</button>
-    </div>
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="notification success" id="notifBox">Upload successful!</div>
 
-    <div class="main-content">
-      <h1>Welcome to your Editor Dashboard</h1>
-    </div>
+      <section class="stat-cards">
+        <div class="card">
+          <h3>Documents</h3>
+          <p>124</p>
+        </div>
+        <div class="card">
+          <h3>Approved</h3>
+          <p>97</p>
+        </div>
+        <div class="card">
+          <h3>Pending</h3>
+          <p>27</p>
+        </div>
+      </section>
+
+      <div class="search-bar">
+        <input type="text" placeholder="Search documents..." />
+        <button><i data-lucide="search"></i> Search</button>
+      </div>
+
+      <section class="document-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Uploaded By</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Policy Guidelines 2025</td>
+              <td>Admin A</td>
+              <td>Approved</td>
+              <td><button class="small-btn">Edit</button></td>
+            </tr>
+            <tr>
+              <td>Risk Report Q2</td>
+              <td>Editor B</td>
+              <td>Pending</td>
+              <td><button class="small-btn">Edit</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
   </div>
 
   <script>
-    // Ensure only logged-in editors access this
     if (!localStorage.getItem('token')) {
       window.location.href = '/login.html';
     } else {
       const token = localStorage.getItem('token');
       const decodedToken = JSON.parse(atob(token.split('.')[1]));
-
-      // Redirect based on role
       if (decodedToken.role_ID === 3) {
         window.location.href = '/user_dashboard.html';
       } else if (decodedToken.role_ID !== 2 && decodedToken.role_ID !== 1) {
         window.location.href = '/login.html';
       }
     }
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = '/login.html';
+    }
+
+    setTimeout(() => {
+      const notif = document.getElementById('notifBox');
+      if (notif) notif.style.display = 'none';
+    }, 3000);
+
+    lucide.createIcons();
   </script>
-   <script src="/logout.js"></script>
 </body>
 </html>

@@ -1,0 +1,251 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Poppins:wght@300;400;600&display=swap');
+
+/* Reset & Base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background-image: url('https://i.pinimg.com/736x/16/d6/65/16d665f720e722cc84952486a0c42798.jpg');
+  background-size: cover;
+  background-position: center;
+  color: #fefbff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 0;
+}
+
+/* HEADER */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: rgba(75, 0, 130, 0.85);
+  color: white;
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  letter-spacing: 1px;
+}
+
+nav ul {
+  list-style: none;
+  display: flex;
+  gap: 20px;
+}
+
+nav ul li a {
+  text-decoration: none;
+  color: #ffe5ff;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+nav ul li a:hover {
+  color: #ff9efc;
+}
+
+/* MAIN CONTENT AREA */
+main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+  padding: 50px;
+  justify-content: center;
+}
+
+.main-left,
+.main-right {
+  flex: 1 1 400px;
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  min-width: 300px;
+}
+
+.main-left h2,
+.main-right h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+  color: #3c0066;
+}
+
+.main-left p,
+.main-right p {
+  font-size: 1rem;
+  color: #4e2b6f;
+  line-height: 1.7;
+}
+
+/* Buttons */
+button {
+  background-color: #7a00c2;
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 25px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 20px;
+}
+
+button:hover {
+  background-color: #a100ff;
+  transform: scale(1.05);
+}
+
+/* FOOTER */
+footer {
+  text-align: center;
+  padding: 20px;
+  background: rgba(63, 0, 77, 0.7);
+  color: #f4dfff;
+  font-size: 0.9rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+
+  nav ul {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  main {
+    padding: 30px 20px;
+  }
+
+  .main-left,
+  .main-right {
+    padding: 20px;
+  }
+}
+/* Banner Section */
+.banner {
+  position: relative;
+  background: rgba(63, 0, 77, 0.7);
+  padding: 80px 30px;
+  text-align: center;
+  color: #fff0fa;
+  background-image: url('https://i.pinimg.com/736x/16/d6/65/16d665f720e722cc84952486a0c42798.jpg');
+  background-size: cover;
+  background-position: center;
+  backdrop-filter: brightness(0.5);
+}
+
+.banner-text h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.5rem;
+  margin-bottom: 15px;
+}
+
+.banner-text p {
+  font-size: 1.1rem;
+  margin-bottom: 30px;
+}
+
+.banner-text button {
+  background-color: #ff55d4;
+  color: white;
+  padding: 12px 30px;
+  border: none;
+  border-radius: 25px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.banner-text button:hover {
+  background-color: #d800aa;
+  transform: scale(1.05);
+}
+
+/* Features Section */
+.features-section {
+  margin-top: 60px;
+  text-align: center;
+}
+
+.features-section h2 {
+  font-family: 'Playfair Display', serif;
+  color: #3c0066;
+  margin-bottom: 30px;
+  font-size: 2rem;
+}
+
+.features-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+}
+
+.feature-card {
+  background: rgba(255, 255, 255, 0.8);
+  padding: 30px 20px;
+  border-radius: 20px;
+  width: 250px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feature-card h3 {
+  color: #772a66;
+  font-size: 1.3rem;
+  margin-bottom: 10px;
+}
+
+.feature-card p {
+  color: #333;
+  font-size: 1rem;
+}
+
+.feature-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+}
+
+/* Scroll Fade-In Animation */
+.fade-in {
+  animation: fadeIn 1.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}

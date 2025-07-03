@@ -1,151 +1,110 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Search User</title>
-  <style>
-    /* Styling for better UI */
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
-    input[type="text"] {
-      padding: 8px;
-      width: 200px;
-      margin-right: 10px;
-    }
-    button {
-      padding: 8px 15px;
-      cursor: pointer;
-    }
-    table {
-      width: 100%;
-      margin-top: 20px;
-      border-collapse: collapse;
-    }
-    th, td {
-      padding: 10px;
-      text-align: left;
-      border: 1px solid #ddd;
-    }
-    th {
-      background-color: #f4f4f4;
-    }
-    .loading {
-      color: #999;
-      font-style: italic;
-    }
-    .error {
-      color: red;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Search User - PTPKM POLICY MANAGEMENT SYSTEM</title>
+  <link rel="stylesheet" href="searchuser.css">
 </head>
 <body>
 
-  <h2>Search User</h2>
+  <!-- Floating Back/Home Button -->
+  <a href="admin_dashboard.html" class="floating-back-btn">← Home</a>
 
-  <!-- Search Form -->
-  <div>
-    <label for="searchTerm">Search by Staff ID, Name, or Email:</label>
-    <input type="text" id="searchTerm" name="searchTerm" placeholder="Enter search term">
-    <button id="searchButton">Search</button>
+  <!-- Main Container -->
+  <div class="container">
+    <h2>Search User</h2>
+
+    <!-- Search Section -->
+    <div class="search-box">
+      <input type="text" id="searchTerm" name="searchTerm" placeholder="Search by Staff ID, Name, or Email">
+      <button id="searchButton">Search</button>
+    </div>
+
+    <!-- Optional Filters -->
+    <!--
+    <div class="filter-row">
+      <select id="roleFilter">
+        <option value="">All Roles</option>
+        <option value="admin">Admin</option>
+        <option value="editor">Editor</option>
+      </select>
+    </div>
+    -->
+
+    <p id="loadingMessage" class="loading" style="display:none;">Searching...</p>
+
+    <h3>Search Results</h3>
+    <table id="resultsTable">
+      <thead>
+        <tr>
+          <th>Staff ID</th>
+          <th>Staff Name</th>
+          <th>Staff Email</th>
+          <th>Role ID</th>
+          <th>Department ID</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
-  <!-- Loading Indicator -->
-  <p id="loadingMessage" class="loading" style="display:none;">Searching...</p>
-
-  <!-- Results Table -->
-  <h3>Search Results</h3>
-  <table id="resultsTable">
-    <thead>
-      <tr>
-        <th>Staff ID</th>
-        <th>Staff Name</th>
-        <th>Staff Email</th>
-        <th>Role ID</th>
-        <th>Department ID</th>
-        <th>Actions</th>  <!-- Added Actions column for Edit button -->
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Results will be populated here -->
-    </tbody>
-  </table>
-
   <script>
-    // Search functionality
     document.getElementById('searchButton').addEventListener('click', async () => {
       const searchTerm = document.getElementById('searchTerm').value.trim();
+      const loadingMessage = document.getElementById('loadingMessage');
+      const tableBody = document.querySelector('#resultsTable tbody');
 
       if (!searchTerm) {
         alert('Please enter a search term.');
         return;
       }
 
-      // Show loading message
-      document.getElementById('loadingMessage').style.display = 'block';
+      loadingMessage.style.display = 'block';
+      tableBody.innerHTML = '';
 
       try {
-        // Make the API call to the backend
-        const response = await fetch(`http://localhost:3000/searchUser?searchTerm=${searchTerm}`);
+        const response = await fetch(`http://localhost:3000/searchUser?searchTerm=${encodeURIComponent(searchTerm)}`);
         const data = await response.json();
-
-        // Hide loading message once data is received
-        document.getElementById('loadingMessage').style.display = 'none';
+        loadingMessage.style.display = 'none';
 
         if (response.ok) {
-          displayResults(data);  // Display the results in the table
+          if (data.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="6" class="error">No results found.</td></tr>`;
+          } else {
+            data.forEach(user => {
+              const row = document.createElement('tr');
+              row.innerHTML = `
+                <td>${user.staff_ID}</td>
+                <td>${user.staff_name}</td>
+                <td>${user.staff_email}</td>
+                <td>${user.role_ID}</td>
+                <td>${user.department_ID}</td>
+                <td>
+                  <button onclick="editUser('${user.staff_ID}')">Edit</button>
+                  <button onclick="deleteUser('${user.staff_ID}')">Delete</button>
+                </td>
+              `;
+              tableBody.appendChild(row);
+            });
+          }
         } else {
-          alert('Error: ' + data.error); // Show error if no results found
+          alert('Error: ' + (data.error || 'Unexpected response'));
         }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        alert('Error: ' + error.message);
+      } catch (err) {
+        loadingMessage.style.display = 'none';
+        console.error('Fetch error:', err);
+        alert('Error: ' + err.message);
       }
     });
 
-    // Function to display search results in a table
-    function displayResults(users) {
-      const tableBody = document.getElementById('resultsTable').getElementsByTagName('tbody')[0];
-      tableBody.innerHTML = '';  // Clear any previous results
-
-      if (users.length === 0) {
-        const row = document.createElement('tr');
-        row.innerHTML = `<td colspan="6" class="error">No results found for the search term.</td>`;
-        tableBody.appendChild(row);
-      } else {
-        // Populate the table with search results
-        users.forEach(user => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${user.staff_ID}</td>
-            <td>${user.staff_name}</td>
-            <td>${user.staff_email}</td>
-            <td>${user.role_ID}</td>
-            <td>${user.department_ID}</td>
-            <td>
-              <div style="display: inline-flex; gap: 10px;">
-                <button onclick="editUser('${user.staff_ID}')">Edit</button>
-                <button onclick="deleteUser('${user.staff_ID}')">Delete</button>
-              </div>
-            </td>
-          `;
-          tableBody.appendChild(row);
-        });
-      }
-    }
-
-    // Function to handle editing a user
     function editUser(staffID) {
-      // Redirect to the edit user page with the staff ID (or you could open a modal here)
-      window.location.href = `/Edit_User.html?staffID=${staffID}`;  // Modify this URL if needed
+      window.location.href = `/Edit_User.html?staffID=${staffID}`;
     }
 
-     // Function to handle editing a user
     function deleteUser(staffID) {
-      // Redirect to the edit user page with the staff ID (or you could open a modal here)
-      window.location.href = `/Delete_User.html?staffID=${staffID}`;  // Modify this URL if needed
+      window.location.href = `/Delete_User.html?staffID=${staffID}`;
     }
   </script>
 

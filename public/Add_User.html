@@ -5,77 +5,75 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Add User - PTPKM POLICY MANAGEMENT SYSTEM</title>
 
-  <!-- jQuery for AJAX requests -->
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet" />
+
+  <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="Add_User.css" />
+
   <script>
-    $(document).ready(function() {
-      // Fetch roles from the server and populate the "Role ID" dropdown
-      $.get('/getRoles', function(roles) {
+    $(document).ready(function () {
+      // Populate roles
+      $.get('/getRoles', function (roles) {
         const roleSelect = $('select[name="role_ID"]');
         if (roles.length > 0) {
-          roles.forEach(function(role) {
+          roles.forEach(function (role) {
             roleSelect.append(`<option value="${role.role_id}">${role.role_name}</option>`);
           });
         } else {
           roleSelect.append('<option disabled>No roles available</option>');
         }
-      }).fail(function() {
+      }).fail(function () {
         alert("Error fetching roles");
       });
 
-      // Fetch departments from the server and populate the "Department ID" dropdown
-      $.get('/getDepartments', function(departments) {
+      // Populate departments
+      $.get('/getDepartments', function (departments) {
         const departmentSelect = $('select[name="department_ID"]');
         if (departments.length > 0) {
-          departments.forEach(function(department) {
+          departments.forEach(function (department) {
             departmentSelect.append(`<option value="${department.department_ID}">${department.department_name}</option>`);
           });
         } else {
           departmentSelect.append('<option disabled>No departments available</option>');
         }
-      }).fail(function() {
+      }).fail(function () {
         alert("Error fetching departments");
       });
 
-      // Attach submit handler to form with id "addUserForm"
-      $('#addUserForm').on('submit', function(e) {
+      // Submit form
+      $('#addUserForm').on('submit', function (e) {
         e.preventDefault();
-
         const passwordErrorDiv = $('#passwordError');
-        passwordErrorDiv.text('');  // clear previous errors
-
-        // Serialize form data
+        passwordErrorDiv.text('');
         const formData = $(this).serialize();
-
         $.post('/addUser', formData)
-          .done(function(response) {
-            passwordErrorDiv.css('color', 'green');
-            passwordErrorDiv.html(response);  // show success message
+          .done(function (response) {
+            passwordErrorDiv.css('color', 'green').html(response);
             $('#addUserForm')[0].reset();
           })
-          .fail(function(xhr) {
-            passwordErrorDiv.css('color', 'red');
-            passwordErrorDiv.html(xhr.responseText);  // show error message from server
+          .fail(function (xhr) {
+            passwordErrorDiv.css('color', 'red').html(xhr.responseText);
           });
       });
-      $('#showPassword').on('change', function() {
+
+      $('#showPassword').on('change', function () {
         const pwdInput = $('#password');
-        if ($(this).is(':checked')) {
-          pwdInput.attr('type', 'text');
-        } else {
-          pwdInput.attr('type', 'password');
-        }
+        pwdInput.attr('type', this.checked ? 'text' : 'password');
       });
     });
   </script>
 </head>
+
 <body>
   <header>
     <h1>PTPKM POLICY MANAGEMENT SYSTEM</h1>
     <nav>
-      <a href="/">Home</a>
-      <a href="/addUser">Add User</a>
+      <a class="nav-btn" href="/">🏠 Home</a>
+      <a class="nav-btn" href="/addUser">➕ Add User</a>
     </nav>
   </header>
 
@@ -85,12 +83,13 @@
       <label>Staff ID:<br><input type="text" name="staff_ID" required></label><br><br>
       <label>Staff Name:<br><input type="text" name="staff_name" required></label><br><br>
       <label>Staff Email:<br><input type="email" name="staff_email" required></label><br><br>
+
       <label>Password:<br>
         <input type="password" id="password" name="password" required>
       </label>
       <div>
-       <input type="checkbox" id="showPassword"> Show Password
-      <div>
+        <input type="checkbox" id="showPassword"> Show Password
+      </div>
       <div id="passwordError" style="color: red; font-size: 0.9em; margin-top: 4px;"></div><br><br>
 
       <label>Role ID:<br>

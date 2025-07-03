@@ -4,51 +4,110 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>User Dashboard</title>
+  <link rel="stylesheet" href="userdashboard.css">
+  <script src="https://unpkg.com/lucide@latest"></script> <!-- Lucide icon library -->
 </head>
 <body>
-  <h1>Welcome to your User Dashboard</h1>
+  <header class="dashboard-header">
+    <h1>PTPKM User Dashboard</h1>
+    
+    </div>
+  </header>
 
-  <!-- Common features for all users -->
-  <div>
-    <button onclick="location.href='/SearchPolicy.html'">Search Documents</button>
-    <button onclick="location.href='/request.html'">Request Access to Documents</button>
-    <button onclick="logout()">Logout</button>
-  </div>
+  <div class="container">
+    <aside class="sidebar">
+      <div>
+        <h2>Menu</h2>
+        <button class="menu-button" onclick="location.href='/SearchPolicy.html'">
+          <i data-lucide="file-search"></i> Search Documents
+        </button>
+        <button class="menu-button" onclick="location.href='/request.html'">
+          <i data-lucide="file-plus"></i> Request Access
+        </button>
+        <button class="menu-button logout" onclick="logout()">
+          <i data-lucide="log-out"></i> Logout
+        </button>
+      </div>
+      <div class="sidebar-footer">
+        
+        </button>
+        <button class="menu-button" onclick="location.href='/forgotpassword.html'">
+          <i data-lucide="key-round"></i> Change Password
+        </button>
+      </div>
+    </aside>
 
-  <!-- Hidden by default; shown if user has upload permission -->
-  <div id="uploadSection" style="display: none; margin-top: 10px;">
-    <button onclick="location.href='/upload.html'">Upload Document</button>
+    <main class="main-content">
+      <div class="notification success" id="statusMsg" style="display: none;">
+        Welcome back! Here's your dashboard summary.
+      </div>
+
+      <section class="stat-cards">
+        <div class="card">
+          <h3>Access Requests</h3>
+          <p id="requestCount">12</p>
+        </div>
+        <div class="card">
+          <h3>Approved</h3>
+          <p id="approvedCount">8</p>
+        </div>
+        <div class="card">
+          <h3>Uploaded</h3>
+          <p id="uploadCount">5</p>
+        </div>
+        <div class="card">
+          <h3>Favorites</h3>
+          <p id="favoriteCount">3</p>
+        </div>
+      </section>
+
+      <div class="search-bar">
+        <input type="text" placeholder="Search by keyword or tag...">
+        <button><i data-lucide="search"></i> Search</button>
+      </div>
+
+      <section class="document-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Document Title</th>
+              <th>Category</th>
+              <th>Last Updated</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="documentList">
+            <tr>
+              <td>Post-Quantum Crypto Policy</td>
+              <td>Security</td>
+              <td>2025-05-12</td>
+              <td><button class="small-btn">Download</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
   </div>
 
   <script>
-    // Ensure this page is accessed only by logged-in users
-    const token = localStorage.getItem('token');
-    if (!token) {
+    // Logout function
+    function logout() {
+      localStorage.removeItem('token');
       window.location.href = '/login.html';
-    } else {
-      const decodedToken = JSON.parse(atob(token.split('.')[1]));
-
-      if (decodedToken.role_ID === 2) {
-        window.location.href = '/editor_dashboard.html';
-      } else if (decodedToken.role_ID !== 3) {
-        window.location.href = '/login.html';
-      } else {
-        // ✅ User is role_ID 3, check if they have upload access
-        fetch('/api/has-upload-access', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.hasUploadAccess) {
-            document.getElementById('uploadSection').style.display = 'block';
-          }
-        })
-        .catch(err => console.error('Access check failed', err));
-      }
     }
+
+    // Simulate dynamic stats load
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('username').textContent = 'UD';
+      document.getElementById('requestCount').textContent = '14';
+      document.getElementById('approvedCount').textContent = '10';
+      document.getElementById('uploadCount').textContent = '7';
+      document.getElementById('favoriteCount').textContent = '5';
+      document.getElementById('statusMsg').style.display = 'block';
+
+      // Initialize Lucide icons
+      lucide.createIcons();
+    });
   </script>
 
   <script src="/logout.js"></script>
