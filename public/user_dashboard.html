@@ -10,8 +10,6 @@
 <body>
   <header class="dashboard-header">
     <h1>PTPKM User Dashboard</h1>
-    
-    </div>
   </header>
 
   <div class="container">
@@ -32,8 +30,6 @@
         </button>
       </div>
       <div class="sidebar-footer">
-        
-        </button>
         <button class="menu-button" onclick="location.href='/forgotpassword.html'">
           <i data-lucide="key-round"></i> Change Password
         </button>
@@ -44,25 +40,6 @@
       <div class="notification success" id="statusMsg" style="display: none;">
         Welcome back! Here's your dashboard summary.
       </div>
-
-      <section class="stat-cards">
-        <div class="card">
-          <h3>Access Requests</h3>
-          <p id="requestCount">12</p>
-        </div>
-        <div class="card">
-          <h3>Approved</h3>
-          <p id="approvedCount">8</p>
-        </div>
-        <div class="card">
-          <h3>Uploaded</h3>
-          <p id="uploadCount">5</p>
-        </div>
-        <div class="card">
-          <h3>Favorites</h3>
-          <p id="favoriteCount">3</p>
-        </div>
-      </section>
 
       <div class="search-bar">
         <input type="text" placeholder="Search by keyword or tag...">
@@ -97,14 +74,12 @@
       try {
         const res = await fetch('/api/has-upload-access', {
           headers: {
-            'Authorization': 'Bearer ' + localStorage.getItem('token')  // if you're using JWT
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
           }
         });
 
         const data = await res.json();
         if (data.hasUploadAccess) {
-          // Show the button or card
-          document.getElementById('uploadCard')?.style?.removeProperty('display');
           document.getElementById('uploadMenuButton')?.style?.removeProperty('display');
         }
       } catch (err) {
@@ -113,17 +88,15 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('username').textContent = 'UD';
-      document.getElementById('requestCount').textContent = '14';
-      document.getElementById('approvedCount').textContent = '10';
-      document.getElementById('uploadCount').textContent = '7';
-      document.getElementById('favoriteCount').textContent = '5';
       document.getElementById('statusMsg').style.display = 'block';
-
       lucide.createIcons();
-
-      checkUploadAccess(); // 🔐 Check for permission
+      checkUploadAccess();
     });
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = '/login.html';
+    }
   </script>
 
   <script src="/logout.js"></script>
