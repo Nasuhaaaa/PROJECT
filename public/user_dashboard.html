@@ -21,6 +21,9 @@
         <button class="menu-button" onclick="location.href='/SearchPolicy.html'">
           <i data-lucide="file-search"></i> Search Documents
         </button>
+        <button id="uploadMenuButton" class="menu-button" style="display: none;" onclick="location.href='/upload.html'">
+          <i data-lucide="upload"></i> Upload File
+        </button>
         <button class="menu-button" onclick="location.href='/request.html'">
           <i data-lucide="file-plus"></i> Request Access
         </button>
@@ -90,13 +93,25 @@
   </div>
 
   <script>
-    // Logout function
-    function logout() {
-      localStorage.removeItem('token');
-      window.location.href = '/login.html';
+    async function checkUploadAccess() {
+      try {
+        const res = await fetch('/api/has-upload-access', {
+          headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('token')  // if you're using JWT
+          }
+        });
+
+        const data = await res.json();
+        if (data.hasUploadAccess) {
+          // Show the button or card
+          document.getElementById('uploadCard')?.style?.removeProperty('display');
+          document.getElementById('uploadMenuButton')?.style?.removeProperty('display');
+        }
+      } catch (err) {
+        console.error('Upload access check failed:', err);
+      }
     }
 
-    // Simulate dynamic stats load
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('username').textContent = 'UD';
       document.getElementById('requestCount').textContent = '14';
@@ -105,8 +120,9 @@
       document.getElementById('favoriteCount').textContent = '5';
       document.getElementById('statusMsg').style.display = 'block';
 
-      // Initialize Lucide icons
       lucide.createIcons();
+
+      checkUploadAccess(); // 🔐 Check for permission
     });
   </script>
 
